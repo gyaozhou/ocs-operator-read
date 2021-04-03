@@ -15,18 +15,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// zhou: set the quota for different StorageClass.
+
 type ocsStorageQuota struct{}
 
 // ensureCreated ensures that all ClusterResourceQuota resources exists with their Spec in
 // the desired state.
 func (obj *ocsStorageQuota) ensureCreated(r *StorageClusterReconciler, sc *ocsv1.StorageCluster) (reconcile.Result, error) {
+
+	// zhou: if enabled, we should set the PVC provisioning quota.
+
 	for _, opc := range sc.Spec.OverprovisionControl {
 		hardLimit := opc.Capacity
+
+		// zhou: "ResourceQuota" is k8s native api. "ClusterResourceQuota" is defined by OCP.
+		//       "A multi-project quota, defined by a ClusterResourceQuota object, allows quotas
+		//        to be shared across multiple projects. Resources used in each selected project
+		//        are aggregated and that aggregate is used to limit resources across all the
+		//        selected projects."
+
 		storageQuota := &quotav1.ClusterResourceQuota{
 			ObjectMeta: metav1.ObjectMeta{Name: generateStorageQuotaName(opc.StorageClassName, opc.QuotaName)},
 			Spec: quotav1.ClusterResourceQuotaSpec{
 				Selector: opc.Selector,
 				Quota: corev1.ResourceQuotaSpec{
+					// zhou: set the PVC quota
 					Hard: corev1.ResourceList{resourceRequestName(opc.StorageClassName): hardLimit},
 				},
 			},
@@ -47,6 +60,9 @@ func (obj *ocsStorageQuota) ensureCreated(r *StorageClusterReconciler, sc *ocsv1
 			}
 			continue
 		}
+
+		// zhou: ??? why no reflect deep equal ?
+
 		// Equality check of 'resource.Quantity' must be done with 'apiequality.Semantic.DeepEqual'
 		// See: https://github.com/kubernetes/apimachinery/issues/75
 		if !apiequality.Semantic.DeepEqual(storageQuota.Spec, currentQuota.Spec) {
@@ -80,6 +96,8 @@ func (obj *ocsStorageQuota) ensureDeleted(r *StorageClusterReconciler, sc *ocsv1
 	}
 	return reconcile.Result{}, nil
 }
+
+// zhou: "ResourceQuota" need this prefix.
 
 func resourceRequestName(storageClassName string) corev1.ResourceName {
 	// storageClassSuffix is the suffix to the qualified portion of storage class resource name.

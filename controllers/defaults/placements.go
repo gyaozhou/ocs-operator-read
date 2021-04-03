@@ -192,6 +192,8 @@ func getPodAffinityTerm(selectorValue ...string) corev1.PodAffinityTerm {
 	return podAffinityTerm
 }
 
+// zhou:
+
 func getOcsToleration() corev1.Toleration {
 	toleration := corev1.Toleration{
 		Key:      NodeTolerationKey,

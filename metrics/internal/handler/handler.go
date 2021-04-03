@@ -13,6 +13,8 @@ const (
 	rbdMetricsPath = metricsPath + "/rbd-mirror"
 )
 
+// zhou:
+
 // RegisterExporterMuxHandlers registers the handlers needed to serve the
 // exporter self metrics
 func RegisterExporterMuxHandlers(mux *http.ServeMux, exporterRegistry *prometheus.Registry, opts promhttp.HandlerOpts) {
@@ -26,6 +28,8 @@ func RegisterRBDMirrorMuxHandlers(mux *http.ServeMux, rbdRegistry *prometheus.Re
 
 	mux.Handle(rbdMetricsPath, metricsHandler)
 }
+
+// zhou:
 
 // RegisterCustomResourceMuxHandlers registers the handlers needed to serve metrics
 // about Custom Resources

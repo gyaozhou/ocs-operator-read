@@ -38,6 +38,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// zhou: README,
+
 type ocsCephCluster struct{}
 type diskSpeed string
 
@@ -94,6 +96,8 @@ var (
 func arbiterEnabled(sc *ocsv1.StorageCluster) bool {
 	return sc.Spec.Arbiter.Enable
 }
+
+// zhou: Rook "CephCluster"
 
 // ensureCreated ensures that a CephCluster resource exists with its Spec in
 // the desired state.
@@ -410,6 +414,9 @@ func getCephClusterMonitoringLabels(sc ocsv1.StorageCluster) map[string]string {
 	return labels
 }
 
+// zhou: README, internal (includes internal-AttachDevice) ceph cluster.
+//       Did what "rook/cluster/examples/kubernetes/ceph/cluster-on-pvc.yaml" did.
+
 // newCephCluster returns a CephCluster object.
 func newCephCluster(sc *ocsv1.StorageCluster, cephImage string, kmsConfigMap *corev1.ConfigMap, reqLogger logr.Logger) (*rookCephv1.CephCluster, error) {
 	labels := map[string]string{
@@ -607,6 +614,8 @@ func validateMultusSelectors(selectors map[rookCephv1.CephNetworkType]string) er
 	return nil
 }
 
+// zhou: README,
+
 func getNetworkSpec(sc ocsv1.StorageCluster) rookCephv1.NetworkSpec {
 	networkSpec := rookCephv1.NetworkSpec{}
 	if sc.Spec.Network != nil {
@@ -625,6 +634,8 @@ func getNetworkSpec(sc ocsv1.StorageCluster) rookCephv1.NetworkSpec {
 
 	return networkSpec
 }
+
+// zhou: README, external ceph cluster
 
 func newExternalCephCluster(sc *ocsv1.StorageCluster, monitoringIP, monitoringPort string) *rookCephv1.CephCluster {
 	labels := map[string]string{
@@ -699,6 +710,8 @@ func getReplicasPerFailureDomain(sc *ocsv1.StorageCluster) int {
 	}
 	return defaults.ReplicasPerFailureDomain
 }
+
+// zhou:
 
 // getCephPoolReplicatedSize returns the default replica per cluster count for a
 // StorageCluster type
@@ -1004,6 +1017,8 @@ func newCephDaemonResources(sc *ocsv1.StorageCluster) map[string]corev1.Resource
 
 	return resources
 }
+
+// zhou: README,
 
 // The checkTuneStorageDevices function checks whether devices from the given
 // storage class are a known type that should expclitly be tuned for fast or

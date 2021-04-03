@@ -18,6 +18,8 @@ import (
 // SnapshotterType represents a snapshotter type
 type SnapshotterType string
 
+// zhou:
+
 type ocsSnapshotClass struct{}
 
 const (
@@ -137,6 +139,8 @@ func (r *StorageClusterReconciler) createSnapshotClasses(vsccs []SnapshotClassCo
 	}
 	return nil
 }
+
+// zhou:
 
 // ensureCreated functions ensures that snpashotter classes are created
 func (obj *ocsSnapshotClass) ensureCreated(r *StorageClusterReconciler, instance *ocsv1.StorageCluster) (reconcile.Result, error) {

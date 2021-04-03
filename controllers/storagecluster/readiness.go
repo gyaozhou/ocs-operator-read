@@ -9,6 +9,7 @@ import (
 
 var operatorReady bool
 
+// zhou:
 var ReadinessChecker healthz.Checker = func(_ *http.Request) error {
 	if operatorReady {
 		return nil

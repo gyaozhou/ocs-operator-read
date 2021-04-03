@@ -27,8 +27,14 @@ var (
 	PhaseClusterExpanding = "Expanding Capacity"
 	// PhaseDeleting is used when cluster is deleting
 	PhaseDeleting = "Deleting"
+
+	// zhou: used in ExternalStorageKind mode (external RedHat Ceph cluster), when local OCS connected with it.
+
 	// PhaseConnecting is used when cluster is connecting to external cluster
 	PhaseConnecting = "Connecting"
+
+	// zhou: used in external KindOCS mode, when local OCS onborads storage provider OCP/OCS cluster
+
 	// PhaseOnboarding is used when consumer is Onboarding
 	PhaseOnboarding = "Onboarding"
 )
@@ -43,6 +49,8 @@ const (
 	// VersionValidReason indicates version in SC CR and operator is equal
 	VersionValidReason = "VersionMatched"
 )
+
+// zhou: update condition to progressing
 
 // SetProgressingCondition sets the ProgressingCondition to True and other conditions to
 // false or Unknown. Used when we are just starting to reconcile, and there are no existing

@@ -16,6 +16,9 @@ var (
 	port = flag.Int("port", 50051, "The server port")
 )
 
+// zhou: binary "provider-api", colocate in image of "ocs-operator"
+//       Deployed in internal mode, and serve provisioning request from other OCS.
+
 func main() {
 	flag.Parse()
 

@@ -38,6 +38,9 @@ const (
 
 // StorageConsumerSpec defines the desired state of StorageConsumer
 type StorageConsumerSpec struct {
+
+	// zhou: set true when acknowledged by consumer OCS.
+
 	// Enable flag ignores a reconcile if set to false
 	Enable bool `json:"enable,omitempty"`
 	// StorageQuotaInGiB describes quota for the consumer
@@ -91,6 +94,8 @@ type ClientStatus struct {
 	// +optional
 	Name string `json:"name,omitempty"`
 }
+
+// zhou: including connectivity information used by consumer.
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status

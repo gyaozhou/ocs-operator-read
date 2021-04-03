@@ -7,9 +7,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
+// zhou: combine (OR) several predicts
+
 // ComposePredicates will compose a variable number of predicates and return a predicate that
 // will allow events that are allowed by any of the given predicates.
 func ComposePredicates(predicates ...predicate.Predicate) predicate.Predicate {
+
+	// zhou: set fields of "predicate.Funcs"
+
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			for _, p := range predicates {
@@ -46,11 +51,15 @@ func ComposePredicates(predicates ...predicate.Predicate) predicate.Predicate {
 	}
 }
 
+// zhou: only takes care of "Update()". We can also implement by setting "predicate.Funcs.UpdateFunc".
+
 // MetadataChangedPredicate will only allow events that changed labels,
 // annotations, or finalizers
 type MetadataChangedPredicate struct {
 	predicate.Funcs
 }
+
+// zhou: only handle metadata udpate.
 
 // Update implements the update event trap for StorageClusterChangedPredicate
 func (p MetadataChangedPredicate) Update(e event.UpdateEvent) bool {

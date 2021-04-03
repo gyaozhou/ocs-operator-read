@@ -41,6 +41,8 @@ var exporterLabels = map[string]string{
 	nameLabel:      metricsExporterName,
 }
 
+// zhou: exporter's Service and Service Monitor
+
 // enableMetricsExporter function start metrics exporter deployment
 // and needed services
 func (r *StorageClusterReconciler) enableMetricsExporter(
@@ -111,6 +113,7 @@ func (r *StorageClusterReconciler) enableMetricsExporter(
 	return nil
 }
 
+// zhou: 8080 and 8081
 func getMetricsExporterService(instance *ocsv1.StorageCluster) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -160,6 +163,8 @@ func getMetricsExporterService(instance *ocsv1.StorageCluster) *corev1.Service {
 	return service
 }
 
+// zhou:
+
 // createMetricsExporterService creates service object or an error
 func createMetricsExporterService(ctx context.Context, r *StorageClusterReconciler, instance *ocsv1.StorageCluster) (*corev1.Service, error) {
 	service := getMetricsExporterService(instance)
@@ -188,6 +193,7 @@ func createMetricsExporterService(ctx context.Context, r *StorageClusterReconcil
 	return service, nil
 }
 
+// zhou:
 func getMetricsExporterServiceMonitor(instance *ocsv1.StorageCluster) *monitoringv1.ServiceMonitor {
 	// Make a copy of the exporterLabels. Because we use exporterLabels in multiple places
 	// (labels and selector for the ocs-metrics-exporter service, as well as service monitor),

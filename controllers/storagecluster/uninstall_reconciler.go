@@ -26,6 +26,10 @@ type CleanupPolicyType string
 // UninstallModeType is a string representing cleanup mode, it decides whether the deletion is graceful or forced
 type UninstallModeType string
 
+// zhou: ordinary path
+//       uninstall.ocs.openshift.io/cleanup-policy: delete
+//       uninstall.ocs.openshift.io/mode: graceful
+
 const (
 	// CleanupPolicyAnnotation defines the cleanup policy for data and metadata during uninstall
 	CleanupPolicyAnnotation = "uninstall.ocs.openshift.io/cleanup-policy"
@@ -223,6 +227,9 @@ func (r *StorageClusterReconciler) setNoobaaUninstallMode(sc *ocsv1.StorageClust
 	return nil
 }
 
+// zhou: set deletion policy in StorageCluster CR annotation for uninstall rook/ceph resource
+//       return True if annotations updated successfully.
+
 // reconcileUninstallAnnotations looks at the current uninstall annotations on the StorageCluster and sets defaults if none or unrecognized ones are set.
 // It returns error and bool (true if storagecluster gets updated else false).
 func (r *StorageClusterReconciler) reconcileUninstallAnnotations(sc *ocsv1.StorageCluster) (bool, error) {
@@ -264,9 +271,15 @@ func (r *StorageClusterReconciler) reconcileUninstallAnnotations(sc *ocsv1.Stora
 			r.Log.Error(err, "Uninstall: Failed to update the StorageCluster with uninstall defaults.", "StorageCluster", klog.KRef(sc.Namespace, sc.Name))
 			return false, err
 		}
+
+		// zhou: annotation is updated successfully.
+
 		r.Log.Info("Uninstall: Default uninstall annotations has been set on StorageCluster", "StorageCluster", klog.KRef(sc.Namespace, sc.Name))
 		return true, nil
 	}
+
+	// zhou: annotation is correct, not updated.
+
 	return false, nil
 }
 
@@ -289,6 +302,8 @@ func (r *StorageClusterReconciler) verifyNoStorageConsumerExist(instance *ocsv1.
 
 	return nil
 }
+
+// zhou: README, delete rook/ceph and noobaa resource.
 
 // deleteResources is the function where the storageClusterFinalizer is handled
 // Every function that is called within this function should be idempotent

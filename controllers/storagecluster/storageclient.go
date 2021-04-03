@@ -16,6 +16,8 @@ const (
 	onboardingPrivateKeyFilePath = "/etc/private-key/key"
 )
 
+// zhou: create StorageClient in provder side, including connectivity information used by consumer.
+
 type storageClient struct{}
 
 var _ resourceManager = &storageClient{}

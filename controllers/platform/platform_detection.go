@@ -70,6 +70,8 @@ func Detect() {
 			log.Fatal(err)
 		}
 
+		// zhou: checking API group "security.openshift.io/v1"
+
 		if discovery.IsGroupDiscoveryFailedError(err) {
 			e := err.(*discovery.ErrGroupDiscoveryFailed)
 			if _, exists := e.Groups[secv1.GroupVersion]; exists {
@@ -92,6 +94,9 @@ func Detect() {
 				}
 			}
 		}
+
+		// zhou: oc get infrastructures.config.openshift.io/cluster
+
 		if platformInstance.isOpenShift {
 			var infrastructure *configv1.Infrastructure
 			if infrastructure, err = configv1client(cfg).Infrastructures().Get(context.TODO(), "cluster", metav1.GetOptions{}); err != nil {

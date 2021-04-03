@@ -45,10 +45,14 @@ const (
 var radosNamespaceName string
 
 var (
+	// zhou: consume multiple external ceph clusters.
+
 	// externalOCSResources will hold the ExternalResources for storageclusters
 	// ExternalResources can be accessible using the UID of an storagecluster
 	externalOCSResources = map[types.UID][]ExternalResource{}
 )
+
+// zhou: used to describe external RHCS or OCS.
 
 // ExternalResource contains a list of External Cluster Resources
 type ExternalResource struct {
@@ -57,11 +61,14 @@ type ExternalResource struct {
 	Name string            `json:"name"`
 }
 
+// zhou: used in connecting to external ceph cluster.
+
 type ocsExternalResources struct{}
 
 // setRookCSICephFS function enables or disables the 'ROOK_CSI_ENABLE_CEPHFS' key
 func (r *StorageClusterReconciler) setRookCSICephFS(
 	enableDisableFlag bool, instance *ocsv1.StorageCluster) error {
+
 	rookCephOperatorConfig := &corev1.ConfigMap{}
 	err := r.Client.Get(context.TODO(),
 		types.NamespacedName{Name: rookCephOperatorConfigName, Namespace: instance.ObjectMeta.Namespace},
@@ -124,6 +131,8 @@ func (r *StorageClusterReconciler) externalSecretDataChecksum(instance *ocsv1.St
 	return sha512sum(found.Data[externalClusterDetailsKey])
 }
 
+// zhou: in order to handle update, compare the checksum of Secret "rook-ceph-external-cluster-details" to old value.
+
 func (r *StorageClusterReconciler) sameExternalSecretData(instance *ocsv1.StorageCluster) bool {
 	extSecretChecksum, err := r.externalSecretDataChecksum(instance)
 	if err != nil {
@@ -164,14 +173,20 @@ func (r *StorageClusterReconciler) deleteSecret(instance *ocsv1.StorageCluster) 
 	return r.Client.Delete(context.TODO(), found)
 }
 
+// zhou: get Secret "rook-ceph-external-cluster-details" which includes external RHCS connection info.
+
 // retrieveExternalSecretData function retrieves the external secret and returns the data it contains
 func (r *StorageClusterReconciler) retrieveExternalSecretData(
 	instance *ocsv1.StorageCluster) ([]ExternalResource, error) {
+
+	// zhou: who prepare this secret ???
+
 	found, err := r.retrieveSecret(externalClusterDetailsSecret, instance)
 	if err != nil {
 		r.Log.Error(err, "Could not find the RookCeph external secret resource.")
 		return nil, err
 	}
+
 	var data []ExternalResource
 	err = json.Unmarshal(found.Data[externalClusterDetailsKey], &data)
 	if err != nil {
@@ -251,6 +266,8 @@ func (r *StorageClusterReconciler) newExternalCephObjectStoreInstances(
 	return retArrObj, nil
 }
 
+// zhou: handle external OCS/RHCS
+
 // ensureCreated ensures that requested resources for the external cluster
 // being created
 func (obj *ocsExternalResources) ensureCreated(r *StorageClusterReconciler, instance *ocsv1.StorageCluster) (reconcile.Result, error) {
@@ -263,9 +280,13 @@ func (obj *ocsExternalResources) ensureCreated(r *StorageClusterReconciler, inst
 	}
 	externalOCSResources[instance.UID] = data
 
+	// zhou: if Secret content doesn't change
+
 	if r.sameExternalSecretData(instance) {
 		return reconcile.Result{}, nil
 	}
+
+	// zhou: create resource according to external Ceph required.
 
 	err = r.createExternalStorageClusterResources(instance)
 	if err != nil {
@@ -279,6 +300,9 @@ func (obj *ocsExternalResources) ensureCreated(r *StorageClusterReconciler, inst
 func (obj *ocsExternalResources) ensureDeleted(_ *StorageClusterReconciler, _ *ocsv1.StorageCluster) (reconcile.Result, error) {
 	return reconcile.Result{}, nil
 }
+
+// zhou: create resources, gather from external OCS/RHCS by
+//       "rook/deploy/examples/create-external-cluster-resources.py"
 
 // createExternalStorageClusterResources creates external cluster resources
 func (r *StorageClusterReconciler) createExternalStorageClusterResources(instance *ocsv1.StorageCluster) error {

@@ -26,6 +26,8 @@ const (
 	storageClusterName                       = "ocs-storagecluster"
 )
 
+// zhou: README, used by provider/consumer onboarding validation.
+
 func main() {
 	cl, err := newClient()
 	if err != nil {

@@ -52,6 +52,8 @@ type StorageProfileStatus struct {
 	Phase StorageProfilePhase `json:"phase,omitempty"`
 }
 
+// zhou:
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 

@@ -28,6 +28,8 @@ CONTROLLER_GEN=$(LOCALBIN)/controller-gen
 	unit-test \
 	deps-update
 
+# zhou: go mod tidy will clean the unused imported packages
+#       go mod vendor will update ./vendor/
 deps-update:
 	@echo "Running deps-update"
 	go mod tidy && go mod vendor
@@ -126,11 +128,15 @@ unit-test:
 
 ocs-operator-ci: shellcheck-test golangci-lint unit-test verify-deps verify-generated verify-latest-csv verify-operator-bundle verify-latest-deploy-yaml
 
+# zhou: update all controller-gen generated code file header by template
+#       "hack/boilerplate.go.txt". e.g. "zz_generated.deepcopy.go"
 # Generate code
 generate: controller-gen
 	@echo Updating generated code
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
+# zhou: `/root/go/bin/controller-gen "crd:trivialVersions=true" rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases`
+#       Generated "config/crd/bases/", "config/rbac/role.yaml"
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	@echo Updating generated manifests

@@ -45,6 +45,8 @@ type StorageClassConfiguration struct {
 	isClusterExternal bool
 }
 
+// zhou: define StorageClass object used to consume storage provisioned
+//       by internal/external ceph cluster.
 type ocsStorageClass struct{}
 
 // ensureCreated ensures that StorageClass resources exist in the desired

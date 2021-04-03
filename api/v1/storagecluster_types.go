@@ -30,17 +30,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// zhou: "rook/deploy/examples/cluster-on-pvc.yaml"
+
 // StorageClusterSpec defines the desired state of StorageCluster
 type StorageClusterSpec struct {
 	ManageNodes  bool   `json:"manageNodes,omitempty"`
 	InstanceType string `json:"instanceType,omitempty"`
 	// LabelSelector is used to specify custom labels of nodes to run OCS on
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+
+	// zhou: this StrageCluster represents a external Ceph cluster, including KindOCS or KindRHCS.
+
 	// ExternalStorage is optional and defaults to false. When set to true, OCS will
 	// connect to an external OCS Storage Cluster instead of provisioning one locally.
 	ExternalStorage ExternalStorageClusterSpec `json:"externalStorage,omitempty"`
+
+	// zhou: provider should enabled it.
+
 	// HostNetwork defaults to false
 	HostNetwork bool `json:"hostNetwork,omitempty"`
+
 	// Placement is optional and used to specify placements of OCS components explicitly
 	Placement rookCephv1.PlacementSpec `json:"placement,omitempty"`
 	// Resources follows the conventions of and is mapped to CephCluster.Spec.Resources
@@ -70,10 +79,15 @@ type StorageClusterSpec struct {
 	// ManagedResources specifies how to deal with auxiliary resources reconciled
 	// with the StorageCluster
 	ManagedResources ManagedResourcesSpec `json:"managedResources,omitempty"`
+
+	// zhou: if enabled, and failureDomain is set to host. Then, we could scale up capacity without
+	//       considering 3 nodes each time.
+
 	// If enabled, sets the failureDomain to host, allowing devices to be
 	// distributed evenly across all nodes, regardless of distribution in zones
 	// or racks.
 	FlexibleScaling bool `json:"flexibleScaling,omitempty"`
+
 	// NodeTopologies specifies the nodes available for the storage cluster,
 	// preferred failure domain and location for the arbiter resources. This is
 	// optional for non-arbiter clusters. For arbiter clusters, the
@@ -81,19 +95,30 @@ type StorageClusterSpec struct {
 	// optional. When the failure domain and the node labels are missing, the
 	// ocs-operator makes a best effort to determine them automatically.
 	NodeTopologies *NodeTopologyMap `json:"nodeTopologies,omitempty"`
+
+	// zhou: stretched deployment
+
 	// ArbiterSpec specifies the storage cluster options related to arbiter.
 	// If Arbiter is enabled, ArbiterLocation in the NodeTopologies must be specified.
 	Arbiter ArbiterSpec `json:"arbiter,omitempty"`
+
 	// Mirroring specifies data mirroring configuration for the storage cluster.
 	// This configuration will only be applied to resources managed by the operator.
 	Mirroring MirroringSpec `json:"mirroring,omitempty"`
+
+	// zhou: limit the overprovisioning
+
 	// OverprovisionControl specifies the allowed hard-limit PVs overprovisioning relative to
 	// the effective usable storage capacity.
 	OverprovisionControl []OverprovisionControlSpec `json:"overprovisionControl,omitempty"`
 
+	// zhou: enable provider to allow consumer connection.
+
 	// AllowRemoteStorageConsumers Indicates that the OCS cluster should deploy the needed
 	// components to enable connections from remote consumers.
 	AllowRemoteStorageConsumers bool `json:"allowRemoteStorageConsumers,omitempty"`
+
+	// zhou: Provider service type, used to exchange token, create rbd pool...
 
 	// ProviderAPIServerServiceType Indicates the ServiceType for OCS Provider API Server Service.
 	// The supported values are NodePort or LoadBalancer. The default ServiceType is NodePort if the value is empty.
@@ -136,6 +161,8 @@ type BlockPoolConfigurationSpec struct {
 	// +kubebuilder:validation:Optional
 	Parameters map[string]string `json:"parameters,omitempty"`
 }
+
+// zhou: README,
 
 // BackingStorageClass defines the backing storageclass for StorageDeviceSet
 type BackingStorageClass struct {
@@ -323,12 +350,18 @@ type MgrSpec struct {
 type ExternalStorageKind string
 
 const (
+	// zhou: external OCS
+
 	// KindOCS specifies a "ocs" kind of the external storage
 	KindOCS ExternalStorageKind = "ocs"
+
+	// zhou: external Ceph cluster
 
 	// KindRHCS specifies a "rhcs" kind of the external storage
 	KindRHCS ExternalStorageKind = "rhcs"
 )
+
+// zhou: used to describe how to connect to external OCS or RedHat Ceph Storage.
 
 // ExternalStorageClusterSpec defines the spec of the external Storage Cluster
 // to be connected to the local cluster
@@ -337,9 +370,14 @@ type ExternalStorageClusterSpec struct {
 	Enable bool `json:"enable,omitempty"`
 }
 
+// zhou: README,
+
 // StorageDeviceSet defines a set of storage devices.
 // It configures the StorageClassDeviceSets field in Rook-Ceph.
 type StorageDeviceSet struct {
+
+	// zhou: specify OSD pods number
+
 	// Count is the number of devices in each StorageClassDeviceSet
 	// +kubebuilder:validation:Minimum=1
 	Count int `json:"count"`
@@ -371,6 +409,8 @@ type StorageDeviceSet struct {
 	// +optional
 	InitialWeight string `json:"initialWeight,omitempty"`
 
+	// zhou: degrade the weight of device working as Primary OSD in replicated pools.
+
 	// PrimaryAffinity is an optional OSD primary-affinity value within the
 	// range [0,1). This value influence the way Ceph's CRUSH selection of
 	// primary OSDs. Lower value reduce performance bottlenecks (especially
@@ -380,11 +420,15 @@ type StorageDeviceSet struct {
 	// +optional
 	PrimaryAffinity string `json:"primaryAffinity,omitempty"`
 
+	// zhou: Label Selector
+
 	// TopologyKey is the Kubernetes topology label that the
 	// StorageClassDeviceSets will be distributed across. Ignored if
 	// Placement is set
 	// +optional
 	TopologyKey string `json:"topologyKey,omitempty"`
+
+	// zhou: The OSD is network attached device like EBS.
 
 	// Portable says whether the OSDs in this device set can move between
 	// nodes. This is ignored if Placement is not set
@@ -396,7 +440,7 @@ type StorageDeviceSet struct {
 	PreparePlacement    rookCephv1.Placement          `json:"preparePlacement,omitempty"`
 	Placement           rookCephv1.Placement          `json:"placement,omitempty"`
 	Config              StorageDeviceSetConfig        `json:"config,omitempty"`
-	DataPVCTemplate     corev1.PersistentVolumeClaim  `json:"dataPVCTemplate"`
+	DataPVCTemplate     corev1.PersistentVolumeClaim  `json:"dataPVCTemplate"` // zhou: used by BlueStore: data, metadata, WAL.
 	MetadataPVCTemplate *corev1.PersistentVolumeClaim `json:"metadataPVCTemplate,omitempty"`
 	WalPVCTemplate      *corev1.PersistentVolumeClaim `json:"walPVCTemplate,omitempty"`
 }
@@ -414,8 +458,13 @@ type StorageDeviceSetConfig struct {
 	TuneFastDeviceClass bool `json:"tuneFastDeviceClass,omitempty"`
 }
 
+// zhou: MCG/Noobaa
+
 // MultiCloudGatewaySpec defines specific multi-cloud gateway configuration options
 type MultiCloudGatewaySpec struct {
+
+	// zhou: "ReconcileStrategyManage"/"ReconcileStrategyStandalone"/...
+
 	// ReconcileStrategy specifies whether to reconcile NooBaa CRs. Valid
 	// values are "manage", "standalone", "ignore" (same as "standalone"),
 	// and "" (same as "manage").
@@ -444,6 +493,8 @@ type MultiCloudGatewaySpec struct {
 	DenyHTTP bool `json:"denyHTTP,omitempty"`
 }
 
+// zhou: connect to an external Postgres server, used by Noobaa to improve performance.
+
 type ExternalPGSpec struct {
 	// PGSecret stores the secret name which contains connection string of the Postgres server
 	// +optional
@@ -458,6 +509,8 @@ type ExternalPGSpec struct {
 	// +optional
 	TLSSecretName string `json:"tlsSecretName,omitempty"`
 }
+
+// zhou: enable NFS service.
 
 // NFSSpec defines specific nfs configuration options
 type NFSSpec struct {
@@ -573,9 +626,13 @@ type StorageClusterStatus struct {
 	// LastAppliedResourceProfile is the resource profile that was last applied successfully & is currently in use.
 	LastAppliedResourceProfile string `json:"lastAppliedResourceProfile,omitempty"`
 
+	// zhou: endpoint used to expose Provider Service.
+
 	// StorageProviderEndpoint holds endpoint info on Provider cluster which is required
 	// for consumer to establish connection with the storage providing cluster.
 	StorageProviderEndpoint string `json:"storageProviderEndpoint,omitempty"`
+
+	// zhou: checksum of Secret "rook-ceph-external-cluster-details"
 
 	// ExternalSecretHash holds the checksum value of external secret data.
 	ExternalSecretHash string `json:"externalSecretHash,omitempty"`
@@ -682,6 +739,8 @@ type StorageClusterList struct {
 	Items           []StorageCluster `json:"items"`
 }
 
+// zhou: used in case of stretched case ???
+
 // ArbiterSpec defines if arbiter should be enabled for the Ceph Cluster.
 // It is optional and defaults to false.
 // If set to true, ArbiterLocation must be set in the NodeTopologies.
@@ -692,10 +751,14 @@ type ArbiterSpec struct {
 	ArbiterMonPVCTemplate       *corev1.PersistentVolumeClaim `json:"arbiterMonPVCTemplate,omitempty"`
 }
 
+// zhou: set the storage quota for overprovisioning. Refer to "ResourceQuota" .
+//       It could be set in percentage or an absolute value limit.
+
 // OverprovisionControlSpec defines the allowed overprovisioning PVC consumption from the underlying cluster.
 // This may be an absolute value or as a percentage of the overall effective capacity.
 // One, and only one of those two (Capacity and Percentage) may be defined.
 type OverprovisionControlSpec struct {
+	// zhou: the StorageClass to be set quota.
 	StorageClassName string                               `json:"storageClassName,omitempty"`
 	QuotaName        string                               `json:"quotaName,omitempty"`
 	Capacity         resource.Quantity                    `json:"capacity,omitempty"`

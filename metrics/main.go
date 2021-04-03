@@ -27,6 +27,8 @@ func (log promhttplogger) Println(v ...interface{}) {
 	klog.Errorln(v...)
 }
 
+// zhou: "metrics-exporter"
+
 func main() {
 	opts := options.NewOptions()
 	opts.AddFlags()
@@ -67,6 +69,8 @@ func main() {
 	// Add exporter self metrics collectors to the registry.
 	exporter.RegisterExporterCollectors(exporterRegistry)
 
+	// zhou: server 1
+
 	// serves exporter self metrics
 	exporterMux := http.NewServeMux()
 	handler.RegisterExporterMuxHandlers(exporterMux, exporterRegistry, promHandlerOpts(exporterRegistry))
@@ -81,6 +85,8 @@ func main() {
 	// Add blocklist collector to the registry
 	collectors.RegisterCephBlocklistCollector(customResourceRegistry, opts)
 
+	// zhou: server 2
+
 	// serves custom resources metrics
 	customResourceMux := http.NewServeMux()
 	handler.RegisterCustomResourceMuxHandlers(customResourceMux, customResourceRegistry, exporterRegistry, promHandlerOpts(customResourceRegistry))
@@ -93,7 +99,9 @@ func main() {
 	handler.RegisterRBDMirrorMuxHandlers(customResourceMux, rbdRegistry, promHandlerOpts(rbdRegistry))
 
 	var rg run.Group
+	// zhou: 8080
 	rg.Add(listenAndServe(exporterMux, opts.ExporterHost, opts.ExporterPort))
+	// zhou: 8081
 	rg.Add(listenAndServe(customResourceMux, opts.Host, opts.Port))
 
 	klog.Infof("Running metrics server on %s:%v", opts.Host, opts.Port)

@@ -19,6 +19,8 @@ var (
 	errTicketAlreadyExists = errors.New("onboarding ticket already used by another storageConsumer")
 )
 
+// zhou: working in storage provider OCS, to manage consumer OCS.
+
 type ocsConsumerManager struct {
 	client       client.Client
 	namespace    string
@@ -52,6 +54,8 @@ func newConsumerManager(ctx context.Context, cl client.Client, namespace string)
 		nameByUID:    nameByUID,
 	}, nil
 }
+
+// zhou: README,
 
 // Create creates a new storageConsumer resource, updates the consumer cache and returns the storageConsumer UID
 func (c *ocsConsumerManager) Create(ctx context.Context, onboard ifaces.StorageClientOnboarding) (string, error) {
@@ -145,6 +149,8 @@ func (c *ocsConsumerManager) Delete(ctx context.Context, id string) error {
 
 	return nil
 }
+
+// zhou: storage provider OCP/OCS handle rpc AcknowledgeOnboarding().
 
 // EnableStorageConsumer enables storageConsumer resource
 func (c *ocsConsumerManager) EnableStorageConsumer(ctx context.Context, id string) error {

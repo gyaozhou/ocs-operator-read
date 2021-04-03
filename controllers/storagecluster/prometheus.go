@@ -22,6 +22,8 @@ const (
 	ruleName                       = "ocs-prometheus-rules"
 )
 
+// zhou: alert and recording rule ?
+
 // enablePrometheusRules is a wrapper around CreateOrUpdatePrometheusRule()
 func (r *StorageClusterReconciler) enablePrometheusRules(ctx context.Context, instance *ocsv1.StorageCluster) error {
 	rule, err := getPrometheusRules(instance.Spec.ExternalStorage.Enable, instance.Namespace)
@@ -69,6 +71,7 @@ func getPrometheusRules(isExternal bool, namespace string) (*monitoringv1.Promet
 	return rule, nil
 }
 
+// zhou: read file
 func getPrometheusRuleSpecFrom(filePath string) (*monitoringv1.PrometheusRuleSpec, error) {
 	if err := CheckFileExists(filePath); err != nil {
 		return nil, err

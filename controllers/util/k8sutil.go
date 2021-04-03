@@ -28,6 +28,8 @@ const (
 	// This configmap is purely for the OCS operator to use.
 	OcsOperatorConfigName = "ocs-operator-config"
 
+	// zhou: core configuraiton used by Ceph
+
 	// This configmap is watched by rook-ceph-operator & is reserved only for manual overrides.
 	RookCephOperatorConfigName = "rook-ceph-operator-config"
 

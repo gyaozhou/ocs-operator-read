@@ -24,6 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// zhou: define how to reconcile a particular resource.
+
 // ReconcileStrategy is a string representing how we want to reconcile
 // (or not) a particular resource
 type ReconcileStrategy string
@@ -31,10 +33,14 @@ type ReconcileStrategy string
 // StorageClassProvisionerType is a string representing StorageClass Provisioner. E.g: aws-ebs
 type StorageClassProvisionerType string
 
+// zhou: resourceManager interface
+
 type resourceManager interface {
 	ensureCreated(*StorageClusterReconciler, *ocsv1.StorageCluster) (reconcile.Result, error)
 	ensureDeleted(*StorageClusterReconciler, *ocsv1.StorageCluster) (reconcile.Result, error)
 }
+
+// zhou: read ceph-advanced-configration.md in rook
 
 type ocsJobTemplates struct{}
 
@@ -105,6 +111,8 @@ var validTopologyLabelKeys = []string{
 	labelRookPrefix,
 }
 
+// zhou:
+
 // +kubebuilder:rbac:groups=ocs.openshift.io,resources=*,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=ceph.rook.io,resources=cephclusters;cephblockpools;cephfilesystems;cephnfses;cephobjectstores;cephobjectstoreusers;cephrbdmirrors;cephblockpoolradosnamespaces,verbs=*
 // +kubebuilder:rbac:groups=noobaa.io,resources=noobaas,verbs=get;list;watch;create;update;delete
@@ -158,12 +166,18 @@ func (r *StorageClusterReconciler) Reconcile(ctx context.Context, request reconc
 		return reconcile.Result{}, err
 	}
 
+	// zhou: validate the spec
+
 	if err := r.validateStorageClusterSpec(sc); err != nil {
 		return reconcile.Result{}, err
 	}
 
+	// zhou: standalone MCG, including Noobaa and Local storage operator.
+
 	r.IsNoobaaStandalone = sc.Spec.MultiCloudGateway != nil &&
 		ReconcileStrategy(sc.Spec.MultiCloudGateway.ReconcileStrategy) == ReconcileStrategyStandalone
+
+	// zhou: get all internal StorageCluster and external StorageCluster
 
 	var err error
 	r.clusters, err = statusutil.GetClusters(ctx, r.Client)
@@ -171,7 +185,12 @@ func (r *StorageClusterReconciler) Reconcile(ctx context.Context, request reconc
 		r.Log.Error(err, "Failed to get clusters")
 		return reconcile.Result{}, err
 	}
+
+	// zhou: false in ordinary path
+
 	r.IsMultipleStorageClusters = len(r.clusters.GetStorageClusters()) > 1
+
+	// zhou: core part to define the major steps.
 
 	// Reconcile changes to the cluster
 	result, reconcileError := r.reconcilePhases(ctx, sc)
@@ -182,6 +201,8 @@ func (r *StorageClusterReconciler) Reconcile(ctx context.Context, request reconc
 		r.Log.Error(err, "Failed to process ceph tools deployment.", "CephToolDeployment", klog.KRef(sc.Namespace, rookCephToolDeploymentName))
 		return reconcile.Result{}, err
 	}
+
+	// zhou: apply the status changes in common point.
 
 	// Apply status changes to the storagecluster
 	statusError := r.Client.Status().Update(ctx, sc)
@@ -198,6 +219,8 @@ func (r *StorageClusterReconciler) Reconcile(ctx context.Context, request reconc
 		return result, nil
 	}
 }
+
+// zhou: set desired Ceph/NooBaaCore/NooBaaDB image version in StorageCluster status.
 
 func (r *StorageClusterReconciler) initializeImagesStatus(sc *ocsv1.StorageCluster) {
 	images := &sc.Status.Images
@@ -217,11 +240,20 @@ func (r *StorageClusterReconciler) initializeImagesStatus(sc *ocsv1.StorageClust
 	images.NooBaaDB.DesiredImage = r.images.NooBaaDB
 }
 
+// zhou: validate the spec content.
+
 // validateStorageClusterSpec must be called before reconciling. Any syntactic and semantic errors in the CR must be caught here.
 func (r *StorageClusterReconciler) validateStorageClusterSpec(instance *ocsv1.StorageCluster) error {
+
+	// zhou: OCS operator can only handle udgrade. So varify that existing CR's version is not newer than operator.
+
 	if err := versionCheck(instance, r.Log); err != nil {
 		r.Log.Error(err, "Failed to validate StorageCluster version.", "StorageCluster", klog.KRef(instance.Namespace, instance.Name))
 		r.recorder.ReportIfNotPresent(instance, corev1.EventTypeWarning, statusutil.EventReasonValidationFailed, err.Error())
+
+		// zhou: only status changed here. In this case, spec is not updated.
+		//       So, we can use Client.Update() instead of Client.Status.Update().
+
 		instance.Status.Phase = statusutil.PhaseError
 		reason := statusutil.EventReasonValidationFailed
 		message := err.Error()
@@ -237,6 +269,8 @@ func (r *StorageClusterReconciler) validateStorageClusterSpec(instance *ocsv1.St
 	message := "Version check successful"
 	statusutil.SetVersionMismatchCondition(&instance.Status.Conditions, corev1.ConditionFalse, reason, message)
 
+	// zhou: validate "Spec.StorageDeviceSets", which describe devices.
+
 	if !instance.Spec.ExternalStorage.Enable {
 		if err := r.validateStorageDeviceSets(instance); err != nil {
 			r.Log.Error(err, "Failed to validate StorageDeviceSets.", "StorageCluster", klog.KRef(instance.Namespace, instance.Name))
@@ -250,6 +284,8 @@ func (r *StorageClusterReconciler) validateStorageClusterSpec(instance *ocsv1.St
 		}
 	}
 
+	// zhou: if arbiter is enabled, make sure it is not conflict with other spec.
+
 	if err := validateArbiterSpec(instance); err != nil {
 		r.Log.Error(err, "Failed to validate ArbiterSpec.", "StorageCluster", klog.KRef(instance.Namespace, instance.Name))
 		r.recorder.ReportIfNotPresent(instance, corev1.EventTypeWarning, statusutil.EventReasonValidationFailed, err.Error())
@@ -260,6 +296,8 @@ func (r *StorageClusterReconciler) validateStorageClusterSpec(instance *ocsv1.St
 		}
 		return err
 	}
+
+	// zhou: validate over provision control
 
 	if err := validateOverprovisionControlSpec(instance); err != nil {
 		r.Log.Error(err, "Failed to validate OverprovisionControlSpec.", "StorageCluster", klog.KRef(instance.Namespace, instance.Name))
@@ -286,6 +324,8 @@ func (r *StorageClusterReconciler) validateStorageClusterSpec(instance *ocsv1.St
 	return nil
 }
 
+// zhou: core
+
 func (r *StorageClusterReconciler) reconcilePhases(
 	ctx context.Context,
 	instance *ocsv1.StorageCluster) (reconcile.Result, error) {
@@ -296,15 +336,23 @@ func (r *StorageClusterReconciler) reconcilePhases(
 		r.Log.Info("Reconciling StorageCluster.", "StorageCluster", klog.KRef(instance.Namespace, instance.Name))
 	}
 
+	// zhou: set desired Ceph/NooBaaCore/NooBaaDB image version in StorageCluster status.
+
 	// Initialize the StatusImages section of the storageclsuter CR
 	r.initializeImagesStatus(instance)
+
+	// zhou: make sure this instance is active.
 
 	// Check for active StorageCluster only if Create request is made
 	// and ignore it if there's another active StorageCluster
 	// If Update request is made and StorageCluster is PhaseIgnored, no need to
 	// proceed further
 	if instance.Status.Phase == "" {
+
 		isActive := r.isActiveStorageCluster(instance)
+
+		// zhou: Mark this CR inactive and ignore it forever
+
 		if !isActive {
 			instance.Status.Phase = statusutil.PhaseIgnored
 			return reconcile.Result{}, nil
@@ -312,6 +360,8 @@ func (r *StorageClusterReconciler) reconcilePhases(
 	} else if instance.Status.Phase == statusutil.PhaseIgnored {
 		return reconcile.Result{}, nil
 	}
+
+	// zhou: mark status as "PhaseProgressing"
 
 	if instance.Status.Phase != statusutil.PhaseReady &&
 		instance.Status.Phase != statusutil.PhaseClusterExpanding &&
@@ -328,16 +378,27 @@ func (r *StorageClusterReconciler) reconcilePhases(
 		statusutil.SetProgressingCondition(&instance.Status.Conditions, reason, message)
 	}
 
+	// zhou: handle finalizers
+
 	// Check GetDeletionTimestamp to determine if the object is under deletion
 	if instance.GetDeletionTimestamp().IsZero() {
+
+		// zhou: add finalizer when CR created
+
 		if !contains(instance.GetFinalizers(), storageClusterFinalizer) {
 			r.Log.Info("Finalizer not found for StorageCluster. Adding finalizer.", "StorageCluster", klog.KRef(instance.Namespace, instance.Name))
+
+			// zhou: append finalizers, not overwrite it.
+
 			instance.ObjectMeta.Finalizers = append(instance.ObjectMeta.Finalizers, storageClusterFinalizer)
 			if err := r.Client.Update(context.TODO(), instance); err != nil {
 				r.Log.Info("Failed to update StorageCluster with finalizer.", "StorageCluster", klog.KRef(instance.Namespace, instance.Name))
 				return reconcile.Result{}, err
 			}
 		}
+
+		// zhou: set cleanup-policy and mode for rook/ceph resource
+		//       Once it changed or failed, need to be requeued.
 
 		if scWasUpdated, err := r.reconcileUninstallAnnotations(instance); err != nil {
 			return reconcile.Result{}, err
@@ -347,10 +408,14 @@ func (r *StorageClusterReconciler) reconcilePhases(
 		}
 
 	} else {
+
 		// The object is marked for deletion
 		instance.Status.Phase = statusutil.PhaseDeleting
 
 		if contains(instance.GetFinalizers(), storageClusterFinalizer) {
+
+			// zhou: delete rook/ceph and noobaa resource.
+
 			if res, err := r.deleteResources(instance); err != nil {
 				r.Log.Info("Uninstall in progress.", "Status", err)
 				r.recorder.ReportIfNotPresent(instance, corev1.EventTypeWarning, statusutil.EventReasonUninstallPending, err.Error())
@@ -360,6 +425,7 @@ func (r *StorageClusterReconciler) reconcilePhases(
 				return res, nil
 			}
 			r.Log.Info("Removing finalizer from StorageCluster.", "StorageCluster", klog.KRef(instance.Namespace, instance.Name))
+
 			// Once all finalizers have been removed, the object will be deleted
 			instance.ObjectMeta.Finalizers = remove(instance.ObjectMeta.Finalizers, storageClusterFinalizer)
 			if err := r.Client.Update(context.TODO(), instance); err != nil {
@@ -367,6 +433,7 @@ func (r *StorageClusterReconciler) reconcilePhases(
 				return reconcile.Result{}, err
 			}
 		}
+
 		r.Log.Info("StorageCluster is terminated, skipping reconciliation.", "StorageCluster", klog.KRef(instance.Namespace, instance.Name))
 
 		// mark operator upgradeable if and only if all other storageclusters are ready or current cluster is the last cluster
@@ -378,39 +445,51 @@ func (r *StorageClusterReconciler) reconcilePhases(
 		return reconcile.Result{}, nil
 	}
 
+	// zhou: handle create/update
+
 	// in-memory conditions should start off empty. It will only ever hold
 	// negative conditions (!Available, Degraded, Progressing)
 	r.conditions = nil
 	// Start with empty r.phase
 	r.phase = ""
 	var objs []resourceManager
+
+	// zhou: setup local OCS, including StorageClass and local devices.
+
 	if !instance.Spec.ExternalStorage.Enable {
+
+		// zhou: install both Ceph and Noobaa
+
 		if !r.IsNoobaaStandalone {
+
 			// list of default ensure functions
 			// preserve list order
 			objs = []resourceManager{
-				&ocsProviderServer{},
-				&storageClient{},
+				&ocsProviderServer{}, // zhou: local OCS, enable provider service
+				&storageClient{},     // zhou: StorageClient including connectivity information used by consumer.
 				&backingStorageClasses{},
 				&ocsTopologyMap{},
-				&ocsStorageQuota{},
-				&ocsCephConfig{},
-				&ocsCephCluster{},
-				&ocsCephBlockPools{},
-				&ocsCephFilesystems{},
-				&ocsCephNFS{},
+				&ocsStorageQuota{},    // zhou: set the quota for different StorageClass.
+				&ocsCephConfig{},      // zhou: README, ConfigMap required by Rook/Ceph.
+				&ocsCephCluster{},     // zhou:
+				&ocsCephBlockPools{},  // zhou: CephBlockPool.
+				&ocsCephFilesystems{}, // zhou:
+				&ocsCephNFS{},         // zhou: README, create cr "cephv1.CephNFS"
 				&ocsCephNFSService{},
 				&ocsCephObjectStores{},
 				&ocsCephObjectStoreUsers{},
 				&ocsCephRGWRoutes{},
-				&ocsStorageClass{},
-				&ocsNoobaaSystem{},
-				&ocsSnapshotClass{},
+				&ocsStorageClass{},  // zhou: define StorageClass object used to consume storage provisioned by internal/external ceph cluste.
+				&ocsNoobaaSystem{},  // zhou:
+				&ocsSnapshotClass{}, // zhou: create VolumeSnapshotClass if enabled.
 				&ocsJobTemplates{},
 				&ocsCephRbdMirrors{},
 				&odfInfoConfig{},
 			}
 		} else {
+
+			// zhou: install Noobaa only without Ceph.
+
 			// noobaa-only ensure functions
 			objs = []resourceManager{
 				&ocsNoobaaSystem{},
@@ -418,10 +497,13 @@ func (r *StorageClusterReconciler) reconcilePhases(
 		}
 
 	} else {
+
+		// zhou: deployed in consumer mode, including request provisioning to external OCS or RedHat Ceph Storage.
+
 		// for external cluster, we have a different set of ensure functions
 		// preserve list order
 		objs = []resourceManager{
-			&ocsExternalResources{},
+			&ocsExternalResources{}, // zhou: handle how to utilize external storage.
 			&ocsStorageQuota{},
 			&ocsCephCluster{},
 			&ocsSnapshotClass{},
@@ -430,8 +512,13 @@ func (r *StorageClusterReconciler) reconcilePhases(
 		}
 	}
 
+	// zhou: create/update each dependent resoruces.
+
 	for _, obj := range objs {
 		returnRes, returnErr := obj.ensureCreated(r, instance)
+
+		// zhou: update status/conditions
+
 		if r.phase == statusutil.PhaseClusterExpanding {
 			message := "StorageCluster is expanding"
 			reason := "Expanding"
@@ -446,8 +533,10 @@ func (r *StorageClusterReconciler) reconcilePhases(
 		} else if instance.Status.Phase != statusutil.PhaseReady &&
 			instance.Status.Phase != statusutil.PhaseOnboarding &&
 			instance.Status.Phase != statusutil.PhaseConnecting {
+
 			instance.Status.Phase = statusutil.PhaseProgressing
 		}
+
 		if returnErr != nil {
 			reason := ocsv1.ReconcileFailed
 			message := fmt.Sprintf("Error while reconciling: %v", returnErr)
@@ -470,6 +559,9 @@ func (r *StorageClusterReconciler) reconcilePhases(
 			return returnRes, nil
 		}
 	}
+
+	// zhou:
+
 	// Process resource profiles only if the cluster is not external or provider mode or noobaa standalone, and if the resource profile has changed
 	if !(instance.Spec.ExternalStorage.Enable || instance.Spec.AllowRemoteStorageConsumers || r.IsNoobaaStandalone) &&
 		(instance.Spec.ResourceProfile != instance.Status.LastAppliedResourceProfile) {
@@ -490,6 +582,7 @@ func (r *StorageClusterReconciler) reconcilePhases(
 			return reconcile.Result{}, err
 		}
 	}
+
 	// All component operators are in a happy state.
 	if r.conditions == nil {
 		r.Log.Info("No component operator reported negatively.")
@@ -577,6 +670,8 @@ func (r *StorageClusterReconciler) reconcilePhases(
 		}
 	}
 
+	// zhou: metrics monitor
+
 	// enable metrics exporter at the end of reconcile
 	// this allows storagecluster to be instantiated before
 	// scraping metrics
@@ -586,10 +681,15 @@ func (r *StorageClusterReconciler) reconcilePhases(
 				ReconcileStrategy: string(ReconcileStrategyUnknown),
 			}
 		}
+
+		// zhou: exporter's Service and Service Monitor
+
 		if err := r.enableMetricsExporter(ctx, instance); err != nil {
 			r.Log.Error(err, "Failed to reconcile metrics exporter.")
 			return reconcile.Result{}, err
 		}
+
+		// zhou: create prometheus rules
 
 		if err := r.enablePrometheusRules(ctx, instance); err != nil {
 			r.Log.Error(err, "Failed to reconcile prometheus rules.")
@@ -625,21 +725,34 @@ func (r *StorageClusterReconciler) reconcilePhases(
 	return reconcile.Result{}, nil
 }
 
+// zhou: OCS operator can only handle udgrade.
+
 // versionCheck populates the `.Status.Version` field
 func versionCheck(sc *ocsv1.StorageCluster, reqLogger logr.Logger) error {
 	if sc.Status.Version == "" {
 		sc.Status.Version = version.Version
 	} else if sc.Status.Version != version.Version { // check anything else only if the versions mismatch
+
+		// zhou: current ocs operator handle previous version StorageCluster CR
+
+		// zhou: parse string to Major:Minor:Patch:...
+
 		storClustSemV1, err := semver.Make(sc.Status.Version)
 		if err != nil {
 			reqLogger.Error(err, "Error while parsing Storage Cluster version")
 			return err
 		}
+
+		// zhou: current OCS operator version
+
 		ocsSemV1, err := semver.Make(version.Version)
 		if err != nil {
 			reqLogger.Error(err, "Error while parsing OCS Operator version")
 			return err
 		}
+
+		// zhou: in case of CR version > OCS operator version, return error.
+
 		// if the storage cluster version is higher than the invoking OCS Operator's version,
 		// return error
 		if storClustSemV1.GT(ocsSemV1) {
@@ -648,6 +761,9 @@ func versionCheck(sc *ocsv1.StorageCluster, reqLogger logr.Logger) error {
 			reqLogger.Error(err, "Incompatible Storage cluster version")
 			return err
 		}
+
+		// zhou: otherwise, update CR version.
+
 		// if the storage cluster version is less than the OCS Operator version,
 		// just update.
 		sc.Status.Version = version.Version
@@ -670,23 +786,39 @@ func (r *StorageClusterReconciler) SetOperatorConditions(message string, reason 
 	}
 }
 
+// zhou: validate "Spec.StorageDeviceSets", must provide PVC for Data store and optional PVC
+//       for Metadata and WAL.
+
 // validateStorageDeviceSets checks the StorageDeviceSets of the given
 // StorageCluster for completeness and correctness
 func (r *StorageClusterReconciler) validateStorageDeviceSets(sc *ocsv1.StorageCluster) error {
+
 	for i, ds := range sc.Spec.StorageDeviceSets {
+
+		// zhou: MUST provide PVC for Data store.
+
 		if ds.DataPVCTemplate.Spec.StorageClassName == nil || *ds.DataPVCTemplate.Spec.StorageClassName == "" {
 			return fmt.Errorf("failed to validate StorageDeviceSet %d: no StorageClass specified", i)
 		}
+
+		// zhou: optional provide PVC for Metadata store
+
 		if ds.MetadataPVCTemplate != nil {
 			if ds.MetadataPVCTemplate.Spec.StorageClassName == nil || *ds.MetadataPVCTemplate.Spec.StorageClassName == "" {
 				return fmt.Errorf("failed to validate StorageDeviceSet %d: no StorageClass specified for metadataPVCTemplate", i)
 			}
 		}
+
+		// zhou: optional provide PVC for WAL store
+
 		if ds.WalPVCTemplate != nil {
 			if ds.WalPVCTemplate.Spec.StorageClassName == nil || *ds.WalPVCTemplate.Spec.StorageClassName == "" {
 				return fmt.Errorf("failed to validate StorageDeviceSet %d: no StorageClass specified for walPVCTemplate", i)
 			}
 		}
+
+		// zhou: device type must be one of ssd/hdd/nvme.
+
 		if ds.DeviceType != "" {
 			if (DeviceTypeSSD != strings.ToLower(ds.DeviceType)) && (DeviceTypeHDD != strings.ToLower(ds.DeviceType)) && (DeviceTypeNVMe != strings.ToLower(ds.DeviceType)) {
 				return fmt.Errorf("failed to validate DeviceType %q: no Device of this type", ds.DeviceType)
@@ -697,6 +829,10 @@ func (r *StorageClusterReconciler) validateStorageDeviceSets(sc *ocsv1.StorageCl
 	return nil
 }
 
+// zhou: due to it might be more than one StorageCluster CR existed in this namepsace, we allow no
+//       more than object as the active StorageCluster CR.
+//       The princples is earlier non-PhaseIgnored CR. Return "instance" is active or not.
+
 func (r *StorageClusterReconciler) isActiveStorageCluster(instance *ocsv1.StorageCluster) bool {
 
 	// instance is already marked for deletion
@@ -704,6 +840,8 @@ func (r *StorageClusterReconciler) isActiveStorageCluster(instance *ocsv1.Storag
 	if !instance.GetDeletionTimestamp().IsZero() {
 		return false
 	}
+
+	// zhou: exclude internal StorageCluster CR defined outside of OCS operator installed namespace.
 
 	// Ensure that the internal storageCluster is only allowed in the OperatorNamespace.
 	if !instance.Spec.ExternalStorage.Enable && instance.Namespace != r.OperatorNamespace {
@@ -735,6 +873,8 @@ func (r *StorageClusterReconciler) isActiveStorageCluster(instance *ocsv1.Storag
 
 	return r.isStorageClusterNotIgnored(instance, storageClusterList)
 }
+
+// zhou: README,
 
 func (r *StorageClusterReconciler) isStorageClusterNotIgnored(
 	instance *ocsv1.StorageCluster, storageClusters []ocsv1.StorageCluster) bool {
@@ -784,16 +924,23 @@ func remove(slice []string, s string) (result []string) {
 	return
 }
 
+// zhou: validate arbiter related spec.
+
 func validateArbiterSpec(sc *ocsv1.StorageCluster) error {
+
+	// zhou: we can't enable both Arbiter and FlexibleScaling at the same time.
 
 	if sc.Spec.Arbiter.Enable && sc.Spec.FlexibleScaling {
 		return fmt.Errorf("arbiter and flexibleScaling both can't be enabled")
 	}
+
 	if sc.Spec.Arbiter.Enable && sc.Spec.NodeTopologies.ArbiterLocation == "" {
 		return fmt.Errorf("arbiter is set to enable but no arbiterLocation has been provided in the Spec.NodeTopologies.ArbiterLocation")
 	}
 	return nil
 }
+
+// zhou: validate over provision control related spec.
 
 func validateOverprovisionControlSpec(sc *ocsv1.StorageCluster) error {
 	for _, opc := range sc.Spec.OverprovisionControl {

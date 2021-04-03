@@ -19,6 +19,8 @@ type OCSProviderClient struct {
 	timeout    time.Duration
 }
 
+// zhou: create grpc client of Provider OCP/OCS.
+
 // NewProviderClient creates a client to talk to the external OCS storage provider server
 func NewProviderClient(ctx context.Context, serverAddr string, timeout time.Duration) (*OCSProviderClient, error) {
 	apiCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -57,6 +59,8 @@ func NewOnboardConsumerRequest() ifaces.StorageClientOnboarding {
 	return &pb.OnboardConsumerRequest{}
 }
 
+// zhou: OnboardConsumer RPC call to validate the consumer and create StorageConsumer resource on the StorageProvider cluster
+
 // OnboardConsumer to validate the consumer and create StorageConsumer
 // resource on the StorageProvider cluster
 func (cc *OCSProviderClient) OnboardConsumer(ctx context.Context, onboard ifaces.StorageClientOnboarding) (*pb.OnboardConsumerResponse, error) {
@@ -88,6 +92,8 @@ func (cc *OCSProviderClient) GetStorageConfig(ctx context.Context, consumerUUID 
 	return cc.Client.GetStorageConfig(apiCtx, req)
 }
 
+// zhou: OffboardConsumer RPC call to delete StorageConsumer CR on the storage provider cluster.
+
 // OffboardConsumer deletes the StorageConsumer CR on the storage provider cluster
 func (cc *OCSProviderClient) OffboardConsumer(ctx context.Context, consumerUUID string) (*pb.OffboardConsumerResponse, error) {
 	if cc.Client == nil || cc.clientConn == nil {
@@ -103,6 +109,8 @@ func (cc *OCSProviderClient) OffboardConsumer(ctx context.Context, consumerUUID 
 
 	return cc.Client.OffboardConsumer(apiCtx, req)
 }
+
+// zhou: acknowledge onboarding by setting "StorageConsumer.Spec.Eanble = true" on Provider OCS.
 
 func (cc *OCSProviderClient) AcknowledgeOnboarding(ctx context.Context, consumerUUID string) (*pb.AcknowledgeOnboardingResponse, error) {
 	if cc.Client == nil || cc.clientConn == nil {
@@ -125,6 +133,8 @@ const (
 	StorageTypeBlock StorageType = iota
 	StorageTypeSharedFile
 )
+
+// zhou: FulfillStorageClassClaim RPC call to create the StorageclassClaim CR on provider cluster.
 
 func (cc *OCSProviderClient) FulfillStorageClaim(
 	ctx context.Context,
@@ -158,6 +168,8 @@ func (cc *OCSProviderClient) FulfillStorageClaim(
 	return cc.Client.FulfillStorageClaim(apiCtx, req)
 }
 
+// zhou: RevokeStorageClassClaim RPC call to delete the StorageclassClaim CR on provider cluster.
+
 func (cc *OCSProviderClient) RevokeStorageClaim(ctx context.Context, consumerUUID, storageClaimName string) (*pb.RevokeStorageClaimResponse, error) {
 	if cc.Client == nil || cc.clientConn == nil {
 		return nil, fmt.Errorf("provider client is closed")
@@ -173,6 +185,8 @@ func (cc *OCSProviderClient) RevokeStorageClaim(ctx context.Context, consumerUUI
 
 	return cc.Client.RevokeStorageClaim(apiCtx, req)
 }
+
+// zhou: GetStorageClassClaimConfig RPC call to generate the json config for claim specific resources.
 
 func (cc *OCSProviderClient) GetStorageClaimConfig(ctx context.Context, consumerUUID, storageClaimName string) (*pb.StorageClaimConfigResponse, error) {
 	if cc.Client == nil || cc.clientConn == nil {
@@ -193,6 +207,8 @@ func (cc *OCSProviderClient) GetStorageClaimConfig(ctx context.Context, consumer
 func NewStorageClientStatus() ifaces.StorageClientStatus {
 	return &pb.ReportStatusRequest{}
 }
+
+// zhou: RPC call to report status
 
 func (cc *OCSProviderClient) ReportStatus(ctx context.Context, consumerUUID string, status ifaces.StorageClientStatus) (*pb.ReportStatusResponse, error) {
 	if cc.Client == nil || cc.clientConn == nil {

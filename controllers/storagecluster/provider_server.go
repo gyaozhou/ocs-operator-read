@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	ocsProviderServerName                    = "ocs-provider-server"
-	providerAPIServerImage                   = "PROVIDER_API_SERVER_IMAGE"
+	ocsProviderServerName                    = "ocs-provider-server"       // zhou: provider server related name
+	providerAPIServerImage                   = "PROVIDER_API_SERVER_IMAGE" // zhou: same as current image "quay.io/ocs-dev/ocs-operator:latest"
 	onboardingValidationKeysGeneratorImage   = "ONBOARDING_VALIDATION_KEYS_GENERATOR_IMAGE"
 	onboardingValidationKeysGeneratorJobName = "onboarding-validation-keys-generator"
 	onboardingValidationPublicKeySecretName  = "onboarding-ticket-key"
@@ -38,11 +38,14 @@ const (
 	ocsProviderServicePort     = int32(50051)
 	ocsProviderServiceNodePort = int32(31659)
 
+	// zhou: Secret to protect Service
 	ocsProviderCertSecretName = ocsProviderServerName + "-cert"
 
 	ocsClientConfigMapName = "ocs-client-operator-config"
 	deployCSIKey           = "DEPLOY_CSI"
 )
+
+// zhou: deployed on OCS cluster working as provider, enable provider Service to handle consumer.
 
 type ocsProviderServer struct{}
 
@@ -55,9 +58,13 @@ func (o *ocsProviderServer) ensureCreated(r *StorageClusterReconciler, instance 
 
 	r.Log.Info("Spec.AllowRemoteStorageConsumers is enabled. Creating Provider API resources")
 
+	// zhou: create Secret including credential used by consumer
+
 	if err := o.createSecret(r, instance); err != nil {
 		return reconcile.Result{}, err
 	}
+
+	// zhou: create Service used to expose provider
 
 	if res, err := o.createService(r, instance); err != nil {
 		return reconcile.Result{}, err
@@ -65,17 +72,23 @@ func (o *ocsProviderServer) ensureCreated(r *StorageClusterReconciler, instance 
 		return res, nil
 	}
 
+	// zhou: create provider Deployment
+
 	if res, err := o.createDeployment(r, instance); err != nil {
 		return reconcile.Result{}, err
 	} else if !res.IsZero() {
 		return res, nil
 	}
 
+	// zhou: create onbording job for provider/consumer validation.
+
 	if res, err := o.createJob(r, instance); err != nil {
 		return reconcile.Result{}, err
 	} else if !res.IsZero() {
 		return res, nil
 	}
+
+	// zhou:
 
 	if err := o.updateClientConfigMap(r, instance.Namespace); err != nil {
 		return reconcile.Result{}, err
@@ -120,6 +133,8 @@ func (o *ocsProviderServer) ensureDeleted(r *StorageClusterReconciler, instance 
 
 	return reconcile.Result{}, finalErr
 }
+
+// zhou:
 
 func (o *ocsProviderServer) createDeployment(r *StorageClusterReconciler, instance *ocsv1.StorageCluster) (reconcile.Result, error) {
 
@@ -166,7 +181,11 @@ func (o *ocsProviderServer) createDeployment(r *StorageClusterReconciler, instan
 	return reconcile.Result{}, nil
 }
 
+// zhou: create Service used to expose provider
+
 func (o *ocsProviderServer) createService(r *StorageClusterReconciler, instance *ocsv1.StorageCluster) (reconcile.Result, error) {
+
+	// zhou: validate Service type, NodePort/LoadBalancer...
 
 	if instance.Spec.ProviderAPIServerServiceType != "" {
 		switch instance.Spec.ProviderAPIServerServiceType {
@@ -187,6 +206,8 @@ func (o *ocsProviderServer) createService(r *StorageClusterReconciler, instance 
 			Namespace: desiredService.Namespace,
 		},
 	}
+
+	// zhou: create or update Service
 
 	_, err := controllerutil.CreateOrUpdate(
 		context.TODO(), r.Client, actualService,
@@ -239,6 +260,8 @@ func (o *ocsProviderServer) createService(r *StorageClusterReconciler, instance 
 			r.Log.Error(err, "Worker nodes count is zero")
 			return reconcile.Result{}, err
 		}
+
+		// zhou: in case of NodePort, only the first one node info is set.
 
 		instance.Status.StorageProviderEndpoint = fmt.Sprintf("%s:%d", nodeAddresses[0], ocsProviderServiceNodePort)
 
@@ -293,6 +316,8 @@ func (o *ocsProviderServer) getWorkerNodesInternalIPAddresses(r *StorageClusterR
 	return nodeAddresses, nil
 }
 
+// zhou: create Secret including credential used by consumer
+
 func (o *ocsProviderServer) createSecret(r *StorageClusterReconciler, instance *ocsv1.StorageCluster) error {
 
 	desiredSecret := GetProviderAPIServerSecret(instance)
@@ -324,6 +349,8 @@ func (o *ocsProviderServer) ensureDeploymentReplica(actual, desired *appsv1.Depl
 	return nil
 }
 
+// zhou: desired provider Deployment
+
 func GetProviderAPIServerDeployment(instance *ocsv1.StorageCluster) *appsv1.Deployment {
 
 	return &appsv1.Deployment{
@@ -349,7 +376,7 @@ func GetProviderAPIServerDeployment(instance *ocsv1.StorageCluster) *appsv1.Depl
 						{
 							Name:    "ocs-provider-api-server",
 							Image:   os.Getenv(providerAPIServerImage),
-							Command: []string{"/usr/local/bin/provider-api"},
+							Command: []string{"/usr/local/bin/provider-api"}, // zhou: services/provider/main.go
 							Env: []corev1.EnvVar{
 								{
 									Name:  util.WatchNamespaceEnvVar,
@@ -400,6 +427,8 @@ func GetProviderAPIServerDeployment(instance *ocsv1.StorageCluster) *appsv1.Depl
 		},
 	}
 }
+
+// zhou: desired provider Service
 
 func GetProviderAPIServerService(instance *ocsv1.StorageCluster) *corev1.Service {
 
@@ -462,6 +491,8 @@ func RandomString(l int) string {
 	return string(bytes)
 }
 
+// zhou: onbording job for provider/consumer validation.
+
 func getOnboardingJobObject(instance *ocsv1.StorageCluster) *batchv1.Job {
 
 	return &batchv1.Job{
@@ -480,7 +511,7 @@ func getOnboardingJobObject(instance *ocsv1.StorageCluster) *batchv1.Job {
 						{
 							Name:    onboardingValidationKeysGeneratorJobName,
 							Image:   os.Getenv(onboardingValidationKeysGeneratorImage),
-							Command: []string{"/usr/local/bin/onboarding-validation-keys-gen"},
+							Command: []string{"/usr/local/bin/onboarding-validation-keys-gen"}, // zhou: ./onboarding-validation-keys-generator/main.go
 							Env: []corev1.EnvVar{
 								{
 									Name:  util.OperatorNamespaceEnvVar,
@@ -494,6 +525,8 @@ func getOnboardingJobObject(instance *ocsv1.StorageCluster) *batchv1.Job {
 		},
 	}
 }
+
+// zhou: create onbording job for provider/consumer validation.
 
 func (o *ocsProviderServer) createJob(r *StorageClusterReconciler, instance *ocsv1.StorageCluster) (reconcile.Result, error) {
 	var err error
@@ -521,6 +554,8 @@ func (o *ocsProviderServer) createJob(r *StorageClusterReconciler, instance *ocs
 	r.Log.Info("Job is running as desired")
 	return reconcile.Result{}, nil
 }
+
+// zhou: ConfigMap "ocs-client-operator-config"
 
 func (o *ocsProviderServer) updateClientConfigMap(r *StorageClusterReconciler, namespace string) error {
 	clientConfig := &corev1.ConfigMap{}

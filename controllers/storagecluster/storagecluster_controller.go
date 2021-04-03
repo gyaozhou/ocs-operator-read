@@ -39,6 +39,10 @@ var (
 	log = ctrl.Log.WithName("controllers").WithName("StorageCluster")
 )
 
+// zhou: dependent images url
+//       These env variables are set by "hack/generate-latest-csv.sh", and the default values are
+//       defined in "hack/common.sh"
+
 func (r *StorageClusterReconciler) initializeImageVars() error {
 	r.images.Ceph = os.Getenv("CEPH_IMAGE")
 	r.images.NooBaaCore = os.Getenv("NOOBAA_CORE_IMAGE")
@@ -92,25 +96,35 @@ type StorageClusterReconciler struct {
 	images                    ImageMap
 	recorder                  *util.EventReporter
 	OperatorCondition         conditions.Condition
-	IsNoobaaStandalone        bool
+	IsNoobaaStandalone        bool // zhou: install Noobaa only, no Ceph.
 	IsMultipleStorageClusters bool
-	clusters                  *util.Clusters
+	clusters                  *util.Clusters // zhou: internal and external StorageCluster
 	OperatorNamespace         string
 }
 
 // SetupWithManager sets up a controller with manager
 func (r *StorageClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	// zhou: get the image url for all dependent components.
+
 	if err := r.initializeImageVars(); err != nil {
 		return err
 	}
 
 	r.recorder = util.NewEventReporter(mgr.GetEventRecorderFor("controller_storagecluster"))
 
+	// zhou: scPredicate will always handle Create/Delete/Generic, and Update Spec or Metadata.
+
 	// Compose a predicate that is an OR of the specified predicates
 	scPredicate := util.ComposePredicates(
+		// zhou: Update() return true when Spec changed.
 		predicate.GenerationChangedPredicate{},
+		// zhou: Update() return true when Metadata changed.
 		util.MetadataChangedPredicate{},
 	)
+
+	// zhou: always return true in case of Create/Update/Generic, And handle Delete in case below.
+	//       Why only handle such case ???
 
 	pvcPredicate := predicate.Funcs{
 		DeleteFunc: func(e event.DeleteEvent) bool {
