@@ -15,6 +15,8 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// zhou: README,
+
 func (r *OCSInitializationReconciler) ensureSCCs(initialData *ocsv1.OCSInitialization) error {
 	sccs := getAllSCCs(initialData.Namespace)
 	for _, scc := range sccs {

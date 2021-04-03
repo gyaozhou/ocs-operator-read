@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// zhou: the tag make all types in this package create corresponding deepcopy
+//       functions.
+
 // Package v1 contains API Schema definitions for the ocs v1 API group
 // +kubebuilder:object:generate=true
 // +groupName=ocs.openshift.io

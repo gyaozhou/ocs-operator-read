@@ -17,6 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// zhou: README, create cr "cephv1.CephNFS"
+
 type ocsCephNFS struct{}
 
 // newCephNFSInstance returns the cephNFS instance that should be created

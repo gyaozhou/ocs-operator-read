@@ -3,6 +3,9 @@
 package defaults
 
 const (
+
+	// zhou: mark as ocs storage ndoes.
+
 	// NodeAffinityKey is the node label to determine which nodes belong
 	// to a storage cluster
 	NodeAffinityKey = "cluster.ocs.openshift.io/openshift-storage"

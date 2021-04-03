@@ -20,6 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// zhou:
+
 type ocsCephRbdMirrors struct{}
 
 var (
@@ -54,6 +56,8 @@ func (r *StorageClusterReconciler) deleteCephRbdMirrorInstance(cephRbdMirrors []
 	return nil
 }
 
+// zhou: README,
+
 // newCephRbdMirrorInstances returns the cephRbdMirror instances that should be created
 // on first run.
 func (r *StorageClusterReconciler) newCephRbdMirrorInstances(initData *ocsv1.StorageCluster) ([]*cephv1.CephRBDMirror, error) {
@@ -79,6 +83,8 @@ func (r *StorageClusterReconciler) newCephRbdMirrorInstances(initData *ocsv1.Sto
 	}
 	return ret, nil
 }
+
+// zhou: README,
 
 // ensureCreated ensures that cephRbdMirror resources exist in the desired state.
 func (obj *ocsCephRbdMirrors) ensureCreated(r *StorageClusterReconciler, instance *ocsv1.StorageCluster) (reconcile.Result, error) {

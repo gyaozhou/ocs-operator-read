@@ -14,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// zhou: README, create cr of "cephv1.CephBlockPool"
+
 type ocsCephBlockPools struct{}
 
 // ensures that peer cluster secret exists and adds it to CephBlockPool
@@ -38,6 +40,8 @@ func (r *StorageClusterReconciler) addPeerSecretsToCephBlockPool(initData *ocsv1
 	mirroringPeerSpec.SecretNames = secretNames
 	return mirroringPeerSpec
 }
+
+// zhou: README,
 
 // newCephBlockPoolInstances returns the cephBlockPool instances that should be created
 // on first run.
@@ -132,6 +136,8 @@ func (r *StorageClusterReconciler) newCephBlockPoolInstances(initData *ocsv1.Sto
 	}
 	return ret, nil
 }
+
+// zhou: README,
 
 // ensureCreated ensures that cephBlockPool resources exist in the desired
 // state.

@@ -57,6 +57,8 @@ func getStorageRequestName(consumerUUID, storageClaimName string) string {
 	return fmt.Sprintf("storagerequest-%s", getStorageRequestHash(consumerUUID, storageClaimName))
 }
 
+// zhou: README,
+
 // Create creates a new StorageRequest resource and returns the StorageRequest ID.
 func (s *storageRequestManager) Create(
 	ctx context.Context,

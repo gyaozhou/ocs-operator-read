@@ -44,6 +44,8 @@ osd_memory_target_cgroup_limit_ratio = 0.8
 `
 )
 
+// zhou: README,
+
 // ensureCreated ensures that a ConfigMap resource exists with its Spec in
 // the desired state.
 func (obj *ocsCephConfig) ensureCreated(r *StorageClusterReconciler, sc *ocsv1.StorageCluster) (reconcile.Result, error) {

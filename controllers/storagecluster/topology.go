@@ -21,6 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// zhou: README,
+
 type ocsTopologyMap struct{}
 
 // ensureCreated ensures that StorageCluster.Status.Topology is up to date
@@ -228,6 +230,8 @@ func generateStrategicPatch(oldObj, newObj interface{}) (client.Patch, error) {
 	return client.RawPatch(types.StrategicMergePatchType, patch), nil
 }
 
+// zhou: README,
+
 // ensureNodeRacks iterates through the list of storage nodes and ensures
 // all nodes have a rack topology label.
 func (r *StorageClusterReconciler) ensureNodeRacks(
@@ -273,6 +277,8 @@ func (r *StorageClusterReconciler) ensureNodeRacks(
 
 	return nil
 }
+
+// zhou: README,
 
 // reconcileNodeTopologyMap builds the map of all topology labels on all nodes
 // in the storage cluster

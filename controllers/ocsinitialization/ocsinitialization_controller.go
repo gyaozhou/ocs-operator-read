@@ -47,6 +47,8 @@ const (
 	PrometheusOperatorCSVNamePrefix  = "odf-prometheus-operator"
 )
 
+// zhou: only handle OCSInitialization CR with name "ocsinit" in current namespace.
+
 // InitNamespacedName returns a NamespacedName for the singleton instance that
 // should exist.
 func InitNamespacedName() types.NamespacedName {
@@ -68,6 +70,9 @@ type OCSInitializationReconciler struct {
 	clusters          *util.Clusters
 }
 
+// zhou: handle ToolBox, deprecated.
+//       only ensure the ConfigMap "rook-ceph-operator-config" are created.
+
 // +kubebuilder:rbac:groups=ocs.openshift.io,resources=*,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;create;update
 // +kubebuilder:rbac:groups=security.openshift.io,resourceNames=privileged,resources=securitycontextconstraints,verbs=get;create;update
@@ -88,8 +93,13 @@ func (r *OCSInitializationReconciler) Reconcile(ctx context.Context, request rec
 
 	r.Log.Info("Reconciling OCSInitialization.", "OCSInitialization", klog.KRef(request.Namespace, request.Name))
 
+	// zhou: only handle OCSInitialization CR with name "ocsinit" in current namespace.
+
 	initNamespacedName := InitNamespacedName()
 	instance := &ocsv1.OCSInitialization{}
+
+	// zhou: set "PhaseIgnored" to OCSInitialization CRs other than "ocsinit".
+
 	if initNamespacedName.Name != request.Name || initNamespacedName.Namespace != request.Namespace {
 		// Ignoring this resource because it has the wrong name or namespace
 		r.Log.Info(wrongNamespacedName)
@@ -129,6 +139,8 @@ func (r *OCSInitializationReconciler) Reconcile(ctx context.Context, request rec
 		return reconcile.Result{}, err
 	}
 
+	// zhou: never set conditions before.
+
 	if instance.Status.Conditions == nil {
 		reason := ocsv1.ReconcileInit
 		message := "Initializing OCSInitialization resource"
@@ -147,6 +159,8 @@ func (r *OCSInitializationReconciler) Reconcile(ctx context.Context, request rec
 		r.Log.Error(err, "Failed to get clusters")
 		return reconcile.Result{}, err
 	}
+
+	// zhou: SecurityContextConstraints
 
 	err = r.ensureSCCs(instance)
 	if err != nil {
@@ -169,17 +183,23 @@ func (r *OCSInitializationReconciler) Reconcile(ctx context.Context, request rec
 		return reconcile.Result{}, err
 	}
 
+	// zhou: ensure ConfigMap "rook-ceph-operator-config"
+
 	err = r.ensureRookCephOperatorConfigExists(instance)
 	if err != nil {
 		r.Log.Error(err, "Failed to ensure rook-ceph-operator-config ConfigMap")
 		return reconcile.Result{}, err
 	}
 
+	// zhou: ensure ConfigMap "ocs-operator-config"
+
 	err = r.ensureOcsOperatorConfigExists(instance)
 	if err != nil {
 		r.Log.Error(err, "Failed to ensure ocs-operator-config ConfigMap")
 		return reconcile.Result{}, err
 	}
+
+	// zhou: ensure Secret "ux-backend-proxy"
 
 	err = r.reconcileUXBackendSecret(instance)
 	if err != nil {
@@ -192,6 +212,9 @@ func (r *OCSInitializationReconciler) Reconcile(ctx context.Context, request rec
 		r.Log.Error(err, "Failed to ensure uxbackend service")
 		return reconcile.Result{}, err
 	}
+
+	// zhou: ROSA specific operation
+
 	if isROSAHCP, err := platform.IsPlatformROSAHCP(); err != nil {
 		r.Log.Error(err, "Failed to determine if ROSA HCP cluster")
 		return reconcile.Result{}, err
@@ -260,6 +283,9 @@ func (r *OCSInitializationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Owns(&promv1.Alertmanager{}).
 		Owns(&promv1.ServiceMonitor{}).
+
+		// zhou: watch StorageCluster, and convert to OCSInitialization CR with name "ocsinit" in current namespace.
+
 		// Watcher for storagecluster required to update
 		// ocs-operator-config configmap if storagecluster spec changes
 		Watches(
@@ -273,6 +299,9 @@ func (r *OCSInitializationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
+
+		// zhou: watch StorageClass, convert to OCSInitialization CR with name "ocsinit" in current namespace.
+
 		// Watcher for storageClass required to update values related to replica-1
 		// in ocs-operator-config configmap, if storageClass changes
 		Watches(
@@ -290,6 +319,10 @@ func (r *OCSInitializationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				},
 			),
 		).
+
+		// zhou: watch ConfigMap with name "rook-ceph-operator-config",
+		//       convert to OCSInitialization CR with name "ocsinit" in current namespace.
+
 		// Watcher for rook-ceph-operator-config cm
 		Watches(
 			&corev1.ConfigMap{
@@ -306,6 +339,10 @@ func (r *OCSInitializationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				},
 			),
 		).
+
+		// zhou: watch ConfigMap with name "ocs-operator-config",
+		//       convert to OCSInitialization CR with name "ocsinit" in current namespace.
+
 		// Watcher for ocs-operator-config cm
 		Watches(
 			&corev1.ConfigMap{
@@ -322,6 +359,10 @@ func (r *OCSInitializationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				},
 			),
 		).
+
+		// zhou: watch ClusterServiceVersion,
+		//       convert to OCSInitialization CR with name "ocsinit" in current namespace.
+
 		// Watcher for prometheus operator csv
 		Watches(
 			&opv1a1.ClusterServiceVersion{},
@@ -337,6 +378,13 @@ func (r *OCSInitializationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+// zhou: ensure ConfigMap "rook-ceph-operator-config", which describing part of
+//       "rook/deploy/examples/operator-openshift.yaml"
+//       "Rook Ceph Operator Config ConfigMap,
+//        Use this ConfigMap to override Rook-Ceph Operator configurations."
+//
+//       But the ConfigMap is empty???
+
 // ensureRookCephOperatorConfigExists ensures that the rook-ceph-operator-config cm exists
 // This configmap is semi-reserved for any user overrides to be applied 4.16 onwards.
 // Earlier it used to be purely reserved for user overrides.
@@ -350,6 +398,9 @@ func (r *OCSInitializationReconciler) ensureRookCephOperatorConfigExists(initial
 			Namespace: initialData.Namespace,
 		},
 	}
+
+	// zhou: ensure the ConfigMap "rook-ceph-operator-config", needed by Rook Ceph, are created.
+	//       User will update the ConfigMap as they see fit.
 
 	opResult, err := ctrl.CreateOrUpdate(r.ctx, r.Client, rookCephOperatorConfig, func() error {
 
@@ -418,6 +469,16 @@ func (r *OCSInitializationReconciler) getCsiTolerations(csiTolerationKey string)
 
 	return tolerations
 }
+
+// zhou: ensure ConfigMap "ocs-operator-config"
+//       For example,
+//data:
+//  CSI_CEPHFS_KERNEL_MOUNT_OPTIONS: ms_mode=prefer-crc
+//  CSI_CLUSTER_NAME: f2xxxx37-exx8-4xx1-8xx5-b039xxxx47c9
+//  CSI_ENABLE_READ_AFFINITY: "true"
+//  CSI_ENABLE_TOPOLOGY: "false"
+//  CSI_TOPOLOGY_DOMAIN_LABELS: kubernetes.io/hostname
+//  ROOK_CSI_ENABLE_NFS: "true"
 
 // ensureOcsOperatorConfigExists ensures that the ocs-operator-config exists & if not create/update it with required values
 // This configmap is reserved just for ocs operator use, primarily meant for passing values to rook-ceph-operator
@@ -553,6 +614,8 @@ func getFailureDomainKeyFromStorageClassParameter(sc *storagev1.StorageClass) st
 		return ""
 	}
 }
+
+// zhou: ensure Secret "ux-backend-proxy"
 
 func (r *OCSInitializationReconciler) reconcileUXBackendSecret(initialData *ocsv1.OCSInitialization) error {
 

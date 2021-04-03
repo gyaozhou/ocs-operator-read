@@ -63,12 +63,15 @@ type OCSProviderServer struct {
 	namespace             string
 }
 
+// zhou: README,
+
 func NewOCSProviderServer(ctx context.Context, namespace string) (*OCSProviderServer, error) {
 	client, err := newClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new client. %v", err)
 	}
 
+	// zhou:
 	consumerManager, err := newConsumerManager(ctx, client, namespace)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new OCSConumer instance. %v", err)
@@ -86,6 +89,8 @@ func NewOCSProviderServer(ctx context.Context, namespace string) (*OCSProviderSe
 		namespace:             namespace,
 	}, nil
 }
+
+// zhou: README, implementation of service
 
 // OnboardConsumer RPC call to onboard a new OCS consumer cluster.
 func (s *OCSProviderServer) OnboardConsumer(ctx context.Context, req *pb.OnboardConsumerRequest) (*pb.OnboardConsumerResponse, error) {
@@ -145,6 +150,8 @@ func (s *OCSProviderServer) AcknowledgeOnboarding(ctx context.Context, req *pb.A
 	return &pb.AcknowledgeOnboardingResponse{}, nil
 }
 
+// zhou: handle RPC GetStorageConfig
+
 // GetStorageConfig RPC call to onboard a new OCS consumer cluster.
 func (s *OCSProviderServer) GetStorageConfig(ctx context.Context, req *pb.StorageConfigRequest) (*pb.StorageConfigResponse, error) {
 
@@ -167,7 +174,9 @@ func (s *OCSProviderServer) GetStorageConfig(ctx context.Context, req *pb.Storag
 		return nil, status.Errorf(codes.Unavailable, "waiting for the rook resources to be provisioned")
 	case ocsv1alpha1.StorageConsumerStateDeleting:
 		return nil, status.Errorf(codes.NotFound, "storageConsumer is already in deleting phase")
+
 	case ocsv1alpha1.StorageConsumerStateReady:
+		// zhou: normal path
 		conString, err := s.getExternalResources(ctx, consumerObj)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to get external resources. %v", err)
@@ -190,11 +199,16 @@ func (s *OCSProviderServer) OffboardConsumer(ctx context.Context, req *pb.Offboa
 	return &pb.OffboardConsumerResponse{}, nil
 }
 
+// zhou: README, provider OCS start server to handle RPC request from consumer OCS.
+
 func (s *OCSProviderServer) Start(port int, opts []grpc.ServerOption) {
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		klog.Fatalf("failed to listen: %v", err)
 	}
+
+	// zhou: gRPC server with credential.
 
 	certFile := ProviderCertsMountPoint + "/tls.crt"
 	keyFile := ProviderCertsMountPoint + "/tls.key"
@@ -205,7 +219,12 @@ func (s *OCSProviderServer) Start(port int, opts []grpc.ServerOption) {
 	}
 
 	opts = append(opts, grpc.Creds(creds))
+
+	// zhou: README, how to use gRPC
+
 	grpcServer := grpc.NewServer(opts...)
+
+	// zhou: user handlers
 	pb.RegisterOCSProviderServer(grpcServer, s)
 	// Register reflection service on gRPC server.
 	reflection.Register(grpcServer)
@@ -214,6 +233,8 @@ func (s *OCSProviderServer) Start(port int, opts []grpc.ServerOption) {
 		klog.Fatalf("failed to start gRPC server: %v", err)
 	}
 }
+
+// zhou:
 
 func newClient() (client.Client, error) {
 	scheme := runtime.NewScheme()
@@ -247,8 +268,34 @@ func newClient() (client.Client, error) {
 
 	return client, nil
 }
+
+// zhou: README, required by Ceph CSI setup.
+
 func (s *OCSProviderServer) getExternalResources(ctx context.Context, consumerResource *ocsv1alpha1.StorageConsumer) ([]*pb.ExternalResource, error) {
 	var extR []*pb.ExternalResource
+
+	// zhou: ConfigMap with monitor endpoints, e.g.
+	/*
+		$ cat <<EOF > csi-config-map.yaml
+		---
+		apiVersion: v1
+		kind: ConfigMap
+		data:
+		  config.json: |-
+		    [
+		      {
+		        "clusterID": "b9127830-b0cc-4e34-aa47-9d1a2e9949a8",
+		        "monitors": [
+		          "192.168.1.1:6789",
+		          "192.168.1.2:6789",
+		          "192.168.1.3:6789"
+		        ]
+		      }
+		    ]
+		metadata:
+		  name: ceph-csi-config
+		EOF
+	*/
 
 	// Configmap with mon endpoints
 	configmap := &v1.ConfigMap{}
@@ -270,6 +317,8 @@ func (s *OCSProviderServer) getExternalResources(ctx context.Context, consumerRe
 			"mapping":  "{}",
 		})})
 
+	// zhou:
+
 	scMon := &v1.Secret{}
 	// Secret storing cluster mon.admin key, fsid and name
 	err = s.client.Get(ctx, types.NamespacedName{Name: monSecret, Namespace: s.namespace}, scMon)
@@ -281,6 +330,8 @@ func (s *OCSProviderServer) getExternalResources(ctx context.Context, consumerRe
 	if fsid == "" {
 		return nil, fmt.Errorf("secret %s data fsid is empty", monSecret)
 	}
+
+	// zhou: README,
 
 	// Get mgr pod hostIP
 	podList := &corev1.PodList{}
@@ -472,6 +523,8 @@ func validateTicket(ticket string, pubKey *rsa.PublicKey) error {
 
 	return nil
 }
+
+// zhou: README,
 
 // FulfillStorageClaim RPC call to create the StorageClaim CR on
 // provider cluster.
@@ -671,6 +724,8 @@ func (s *OCSProviderServer) GetStorageClaimConfig(ctx context.Context, req *pb.S
 	return &pb.StorageClaimConfigResponse{ExternalResource: extR}, nil
 
 }
+
+// zhou: handle RPC call "ReportStatus".
 
 // ReportStatus rpc call to check if a consumer can reach to the provider.
 func (s *OCSProviderServer) ReportStatus(ctx context.Context, req *pb.ReportStatusRequest) (*pb.ReportStatusResponse, error) {

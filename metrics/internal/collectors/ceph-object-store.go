@@ -46,6 +46,8 @@ func NewCephObjectStoreCollector(opts *options.Options) *CephObjectStoreCollecto
 	}
 }
 
+// zhou: README, handle informer by hand.
+
 // Run starts CephObjectStore informer
 func (c *CephObjectStoreCollector) Run(stopCh <-chan struct{}) {
 	go c.Informer.Run(stopCh)

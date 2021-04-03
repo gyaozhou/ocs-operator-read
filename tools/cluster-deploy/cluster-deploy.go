@@ -16,6 +16,11 @@ var (
 	arbiterEnabled         = flag.Bool("arbiter", false, "Deploy the StorageCluster with arbiter enabled")
 )
 
+// zhou: When deploying via Console, the creation wizard takes care of labelling
+//       the selected nodes. This tool is designed for this purpose.
+//       If no console used, the user should execute command
+//       `$ oc label nodes <NodeName> cluster.ocs.openshift.io/openshift-storage=''`
+//       on at least 3 nodes.
 func main() {
 
 	flag.Parse()

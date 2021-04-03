@@ -99,6 +99,8 @@ func printVersion() {
 	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 }
 
+// zhou: "ocs-operator", colocate in image of "ocs-operator"
+
 func main() {
 	var probeAddr string
 	var metricsAddr string
@@ -121,6 +123,8 @@ func main() {
 		setupLog.Info("running in development mode")
 	}
 
+	// zhou: ocs-operator installed namespace, e.g. openshift-storage
+
 	operatorNamespace, err := util.GetOperatorNamespace()
 	if err != nil {
 		setupLog.Error(err, "unable to get operator namespace")
@@ -131,6 +135,8 @@ func main() {
 		operatorNamespace:            {},
 		"openshift-storage-extended": {},
 	}
+
+	// zhou: detect current platform OCP or not.
 
 	platform.Detect()
 	isOpenShift, err := platform.IsPlatformOpenShift()
@@ -143,6 +149,8 @@ func main() {
 	} else {
 		setupLog.Info("Cluster is not running on OpenShift.")
 	}
+
+	// zhou: watch namespace ocs-operator installed namespace "openshift-storage" and "oppenshift-storage-extended".
 
 	cfg := ctrl.GetConfigOrDie()
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -165,6 +173,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	// zhou: controller to reconcile "ocsinitialization", to preconfig such as ConfigMap, Secret, ...
+
 	if err = (&ocsinitialization.OCSInitializationReconciler{
 		Client:            mgr.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("OCSInitialization"),
@@ -175,6 +185,8 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "OCSInitialization")
 		os.Exit(1)
 	}
+
+	// zhou: controller to handle `storagecluster`.
 
 	if err = (&storagecluster.StorageClusterReconciler{
 		Client:            mgr.GetClient(),
@@ -187,6 +199,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	// zhou:
+
 	if err = (&controllers.StorageConsumerReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("StorageConsumer"),
@@ -195,6 +209,8 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "StorageConsumer")
 		os.Exit(1)
 	}
+
+	// zhou:
 
 	if err = (&storagerequest.StorageRequestReconciler{
 		Cache:             mgr.GetCache(),
@@ -206,6 +222,8 @@ func main() {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	// zhou: ensure OCSInitialization CR "ocsinit" was created automatically when operator starting.
 
 	// Create OCSInitialization CR if it's not present
 	ocsNamespacedName := ocsinitialization.InitNamespacedName()

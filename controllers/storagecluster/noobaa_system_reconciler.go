@@ -25,6 +25,8 @@ const (
 	MonitoringNamespace = "openshift-monitoring"
 )
 
+// zhou: README,
+
 type ocsNoobaaSystem struct{}
 
 func (obj *ocsNoobaaSystem) ensureCreated(r *StorageClusterReconciler, sc *ocsv1.StorageCluster) (reconcile.Result, error) {

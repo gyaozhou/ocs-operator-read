@@ -68,6 +68,8 @@ func (c *Clusters) IsInternalAndExternalStorageClustersExist() bool {
 	return len(c.internalStorageClusters) > 0 && len(c.externalStorageClusters) > 0
 }
 
+// zhou: get all internal StorageCluster and external StorageCluster
+
 func GetClusters(ctx context.Context, cli client.Client) (*Clusters, error) {
 
 	var storageClusters ocsv1.StorageClusterList

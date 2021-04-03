@@ -24,7 +24,9 @@ fi
 
 # always start fresh and remove any previous artifacts that may exist.
 mkdir -p $OUTDIR_TEMPLATES
+
 mkdir -p $OUTDIR_CRDS
+
 
 # ==== DUMP OCS YAMLS ====
 # Generate an OCS CSV using the operator-sdk.
@@ -33,8 +35,11 @@ function gen_ocs_csv() {
 	echo "Generating OpenShift Container Storage CSV"
 	rm -rf "$(dirname $OCS_FINAL_DIR)"
 	ocs_crds_outdir="$OUTDIR_CRDS/ocs"
+    # zhou: "deploy/csv-templates/manifests/ocs-operator.clusterserviceversion.yaml"
 	rm -rf $OUTDIR_TEMPLATES/manifests/ocs-operator.clusterserviceversion.yaml
+    # zhou: "deploy/csv-templates/ocs-operator.csv.yaml.in"    
 	rm -rf $OCS_CSV
+    # zhou: "deploy/csv-templates/crds/ocs"
 	rm -rf $ocs_crds_outdir
 	mkdir -p $ocs_crds_outdir
 
@@ -42,6 +47,7 @@ function gen_ocs_csv() {
 	# shellcheck disable=SC2086
 	$OPERATOR_SDK $gen_args
 	pushd config/manager
+    # zhou: export OCS_IMAGE=${OCS_IMAGE:-"${IMAGE_REGISTRY}/${REGISTRY_NAMESPACE}/${OPERATOR_IMAGE_NAME}:${IMAGE_TAG}"}
 	$KUSTOMIZE edit set image ocs-dev/ocs-operator="$OCS_IMAGE"
 	popd
 	$KUSTOMIZE build config/manifests/ocs-operator | $OPERATOR_SDK generate bundle -q --overwrite=false --output-dir deploy/ocs-operator --kustomize-dir config/manifests/ocs-operator --package ocs-operator --version "$CSV_VERSION" --extra-service-accounts=ux-backend-server

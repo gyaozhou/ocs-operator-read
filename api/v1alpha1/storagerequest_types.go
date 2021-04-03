@@ -62,6 +62,8 @@ type StorageRequestStatus struct {
 	CephResources []*CephResourcesSpec `json:"cephResources,omitempty"`
 }
 
+// zhou: README, used by provider/consumer
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="StorageType",type="string",JSONPath=".spec.type"
