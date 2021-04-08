@@ -111,6 +111,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// zhou: controller
 	if err = (&ocsinitialization.OCSInitializationReconciler{
 		Client:         mgr.GetClient(),
 		Log:            ctrl.Log.WithName("controllers").WithName("OCSInitialization"),
@@ -121,6 +122,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// zhou: controller
 	if err = (&storagecluster.StorageClusterReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("StorageCluster"),
@@ -130,6 +132,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// zhou: controller
 	if err = (&persistentvolume.PersistentVolumeReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("PersistentVolume"),

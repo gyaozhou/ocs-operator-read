@@ -52,6 +52,7 @@ type OCSInitializationReconciler struct {
 	RookImage      string
 }
 
+// zhou: get deployment of rook/ceph toolbox
 func newToolsDeployment(namespace string, rookImage string) *appsv1.Deployment {
 
 	name := rookCephToolDeploymentName
@@ -144,6 +145,7 @@ func newToolsDeployment(namespace string, rookImage string) *appsv1.Deployment {
 	}
 }
 
+// zhou: check rook/ceph tool box installed or not?
 func (r *OCSInitializationReconciler) ensureToolsDeployment(initialData *ocsv1.OCSInitialization) error {
 
 	var isFound bool
@@ -161,6 +163,7 @@ func (r *OCSInitializationReconciler) ensureToolsDeployment(initialData *ocsv1.O
 		return err
 	}
 
+	// zhou: the CR defines the rook/ceph toolbox pod.
 	if initialData.Spec.EnableCephTools {
 		// Create or Update if ceph tools is enabled.
 
@@ -185,6 +188,8 @@ func (r *OCSInitializationReconciler) ensureToolsDeployment(initialData *ocsv1.O
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;create;update
 // +kubebuilder:rbac:groups=security.openshift.io,resourceNames=privileged,resources=securitycontextconstraints,verbs=get;create;update
 
+// zhou: config/sample/ocs_v11_ocsinitialization.yaml.
+
 // Reconcile reads that state of the cluster for a OCSInitialization object and makes changes based on the state read
 // and what is in the OCSInitialization.Spec
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
@@ -199,6 +204,7 @@ func (r *OCSInitializationReconciler) Reconcile(request reconcile.Request) (reco
 
 	initNamespacedName := InitNamespacedName()
 	instance := &ocsv1.OCSInitialization{}
+
 	if initNamespacedName.Name != request.Name || initNamespacedName.Namespace != request.Namespace {
 		// Ignoring this resource because it has the wrong name or namespace
 		r.Log.Info(wrongNamespacedName)
@@ -251,6 +257,7 @@ func (r *OCSInitializationReconciler) Reconcile(request reconcile.Request) (reco
 		}
 	}
 
+	// zhou: SecurityContextConstraints
 	err = r.ensureSCCs(instance)
 	if err != nil {
 		reason := ocsv1.ReconcileFailed
@@ -272,12 +279,15 @@ func (r *OCSInitializationReconciler) Reconcile(request reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
+	// zhou: handle "OCSInitialization.Spec.EnableCephTools" by checking/launch
+	//       rook/ceph `deployment`.
 	err = r.ensureToolsDeployment(instance)
 	if err != nil {
 		r.Log.Error(err, "Failed to process ceph tools deployment")
 		return reconcile.Result{}, err
 	}
 
+	// zhou: if no configmap existed, create it which required by rook/ceph.
 	if !instance.Status.RookCephOperatorConfigCreated {
 		// if true, no need to ensure presence of ConfigMap
 		// if false, ensure ConfigMap and update the status
@@ -301,6 +311,8 @@ func (r *OCSInitializationReconciler) Reconcile(request reconcile.Request) (reco
 
 // SetupWithManager sets up a controller with a manager
 func (r *OCSInitializationReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// zhou: get namespace "metadata.annotations['olm.targetNamespaces']"
+	//       https://docs.openshift.com/container-platform/4.7/operators/understanding/olm/olm-understanding-olm.html
 	ns, err := util.GetWatchNamespace()
 	if err != nil {
 		return err
@@ -313,11 +325,16 @@ func (r *OCSInitializationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	r.RookImage = rookImage
 
+	// zhou: may create rook/ceph toolbox `deployment` according to CR.
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ocsv1.OCSInitialization{}).
 		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }
+
+// zhou: part of "rook/cluster/examples/kubernetes/ceph/operator.yaml"
+//       "Rook Ceph Operator Config ConfigMap,
+//        Use this ConfigMap to override Rook-Ceph Operator configurations."
 
 // returns a ConfigMap with default settings for rook-ceph operator
 func newRookCephOperatorConfig(namespace string) *corev1.ConfigMap {
@@ -342,6 +359,7 @@ func newRookCephOperatorConfig(namespace string) *corev1.ConfigMap {
 	return config
 }
 
+// zhou: Rook Ceph Operator Config ConfigMap, set `rook-ceph-operator` config
 func (r *OCSInitializationReconciler) ensureRookCephOperatorConfig(initialData *ocsv1.OCSInitialization) error {
 	rookCephOperatorConfig := &corev1.ConfigMap{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: rookCephOperatorConfigName, Namespace: initialData.Namespace}, rookCephOperatorConfig)

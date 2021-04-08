@@ -253,6 +253,7 @@ func (obj *ocsCephCluster) ensureDeleted(r *StorageClusterReconciler, sc *ocsv1.
 
 }
 
+// zhou: README, internal and internal-AttachDevice ?
 // newCephCluster returns a CephCluster object.
 func newCephCluster(sc *ocsv1.StorageCluster, cephImage string, nodeCount int, serverVersion *version.Info, kmsConfigMap *corev1.ConfigMap, reqLogger logr.Logger) *cephv1.CephCluster {
 	labels := map[string]string{
@@ -370,6 +371,7 @@ func validateMultusSelectors(selectors map[string]string) error {
 	return nil
 }
 
+// zhou: README,
 func newExternalCephCluster(sc *ocsv1.StorageCluster, cephImage, monitoringIP, monitoringPort string) *cephv1.CephCluster {
 	labels := map[string]string{
 		"app": sc.Name,
