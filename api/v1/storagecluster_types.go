@@ -24,6 +24,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// zhou: rook/cluster/examples/kubernetes/ceph/cluster-on-pvc.yaml
+
 // StorageClusterSpec defines the desired state of StorageCluster
 type StorageClusterSpec struct {
 	ManageNodes  bool   `json:"manageNodes,omitempty"`
@@ -130,6 +132,8 @@ type ExternalStorageClusterSpec struct {
 	Enable bool `json:"enable,omitempty"`
 }
 
+// zhou: README,
+
 // StorageDeviceSet defines a set of storage devices.
 // It configures the StorageClassDeviceSets field in Rook-Ceph.
 type StorageDeviceSet struct {
@@ -161,11 +165,13 @@ type StorageDeviceSet struct {
 	// +optional
 	Portable bool `json:"portable,omitempty"`
 
-	Name                string                        `json:"name"`
-	Resources           corev1.ResourceRequirements   `json:"resources,omitempty"`
-	PreparePlacement    rook.Placement                `json:"preparePlacement,omitempty"`
-	Placement           rook.Placement                `json:"placement,omitempty"`
-	Config              StorageDeviceSetConfig        `json:"config,omitempty"`
+	Name             string                      `json:"name"`
+	Resources        corev1.ResourceRequirements `json:"resources,omitempty"`
+	PreparePlacement rook.Placement              `json:"preparePlacement,omitempty"`
+	Placement        rook.Placement              `json:"placement,omitempty"`
+	Config           StorageDeviceSetConfig      `json:"config,omitempty"`
+
+	// zhou: README, specify storageclass here, used to create pvc.
 	DataPVCTemplate     corev1.PersistentVolumeClaim  `json:"dataPVCTemplate"`
 	MetadataPVCTemplate *corev1.PersistentVolumeClaim `json:"metadataPVCTemplate,omitempty"`
 	WalPVCTemplate      *corev1.PersistentVolumeClaim `json:"walPVCTemplate,omitempty"`

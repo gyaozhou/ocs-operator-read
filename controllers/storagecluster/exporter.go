@@ -30,6 +30,7 @@ var exporterLabels = map[string]string{
 // enableMetricsExporter is a wrapper around CreateOrUpdateService()
 // and CreateOrUpdateServiceMonitor()
 func (r *StorageClusterReconciler) enableMetricsExporter(instance *ocsv1.StorageCluster) error {
+	// zhou: labels defined in storagecluster.spec.monitoring
 	err := mergo.Merge(&exporterLabels, instance.Spec.Monitoring.Labels, mergo.WithOverride)
 	if err != nil {
 		return err
@@ -45,6 +46,7 @@ func (r *StorageClusterReconciler) enableMetricsExporter(instance *ocsv1.Storage
 	return nil
 }
 
+// zhou:
 func getMetricsExporterService(instance *ocsv1.StorageCluster) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -90,6 +92,7 @@ func getMetricsExporterService(instance *ocsv1.StorageCluster) *corev1.Service {
 	return service
 }
 
+// zhou:
 // CreateOrUpdateService creates service object or an error
 func CreateOrUpdateService(r *StorageClusterReconciler, instance *ocsv1.StorageCluster) (*corev1.Service, error) {
 	service := getMetricsExporterService(instance)
@@ -118,6 +121,7 @@ func CreateOrUpdateService(r *StorageClusterReconciler, instance *ocsv1.StorageC
 	return service, nil
 }
 
+// zhou:
 func getMetricsExporterServiceMonitor(instance *ocsv1.StorageCluster) *monitoringv1.ServiceMonitor {
 	serviceMonitor := &monitoringv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{

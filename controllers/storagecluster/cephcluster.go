@@ -253,7 +253,10 @@ func (obj *ocsCephCluster) ensureDeleted(r *StorageClusterReconciler, sc *ocsv1.
 
 }
 
-// zhou: README, internal and internal-AttachDevice ?
+// zhou: README, internal and internal-AttachDevice ? I suppose they are same
+//       to rook/ceph.
+//       Did what "rook/cluster/examples/kubernetes/ceph/cluster-on-pvc.yaml" did.
+
 // newCephCluster returns a CephCluster object.
 func newCephCluster(sc *ocsv1.StorageCluster, cephImage string, nodeCount int, serverVersion *version.Info, kmsConfigMap *corev1.ConfigMap, reqLogger logr.Logger) *cephv1.CephCluster {
 	labels := map[string]string{

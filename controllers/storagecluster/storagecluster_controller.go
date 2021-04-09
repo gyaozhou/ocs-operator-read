@@ -48,6 +48,7 @@ func (r *StorageClusterReconciler) initializeImageVars() error {
 	return nil
 }
 
+// zhou: get kubernetes version for check feature e.g. "topology spread constraints"
 func (r *StorageClusterReconciler) initializeServerVersion() error {
 	clientset, err := kubernetes.NewForConfig(config.GetConfigOrDie())
 	if err != nil {
@@ -96,6 +97,7 @@ func (r *StorageClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
+	// zhou: "AWS;Azure;BareMetal;GCP;Libvirt;OpenStack;None;VSphere;oVirt;IBMCloud;KubeVirt"
 	r.platform = &Platform{}
 	r.recorder = mgr.GetEventRecorderFor("controller_storagecluster")
 
@@ -105,6 +107,7 @@ func (r *StorageClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		util.MetadataChangedPredicate{},
 	)
 
+	// zhou: don't care about DeleteEvent?
 	pvcPredicate := predicate.Funcs{
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			// Evaluates to false if the object has been confirmed deleted.

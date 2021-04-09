@@ -42,6 +42,7 @@ func (r *PersistentVolumeReconciler) Reconcile(request reconcile.Request) (recon
 
 	r.Log.Info("Reconciling PersistentVolume")
 
+	// zhou: validation function list
 	ensureFs := []ensureFunc{
 		r.ensureExpansionSecret,
 	}
@@ -73,6 +74,7 @@ func (r *PersistentVolumeReconciler) ensureExpansionSecret(pv *corev1.Persistent
 
 	secretRef := &corev1.SecretReference{}
 
+	// zhou: copy StorageClass secret fields to PV, why???
 	if secretName, ok := sc.Parameters[csiExpansionSecretName]; ok {
 		secretRef.Name = secretName
 	}
@@ -80,6 +82,7 @@ func (r *PersistentVolumeReconciler) ensureExpansionSecret(pv *corev1.Persistent
 		secretRef.Namespace = secretNamespace
 	}
 
+	// zhou: when need to copy and patch ???
 	newPV := &corev1.PersistentVolume{}
 	pv.DeepCopyInto(newPV)
 

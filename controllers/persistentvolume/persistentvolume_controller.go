@@ -22,6 +22,8 @@ const (
 	csiCephFSDriverSuffix       = ".cephfs.csi.ceph.com"
 )
 
+// zhou: only take care about ceph's rbd and cephfs pv.
+
 // reconcilePV determines whether we want to reconcile a given PV
 func reconcilePV(obj runtime.Object) bool {
 	pv, ok := obj.(*corev1.PersistentVolume)
@@ -81,6 +83,7 @@ func (r *PersistentVolumeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		util.MetadataChangedPredicate{},
 	)
 
+	// zhou: new controller watch `PersistentVolume`.
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.PersistentVolume{}, builder.WithPredicates(predicate, pvPredicate)).
 		Complete(r)

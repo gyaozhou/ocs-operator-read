@@ -22,6 +22,8 @@ type StorageClassConfiguration struct {
 
 type ocsStorageClass struct{}
 
+// zhou: README,
+
 // ensureCreated ensures that StorageClass resources exist in the desired
 // state.
 func (obj *ocsStorageClass) ensureCreated(r *StorageClusterReconciler, instance *ocsv1.StorageCluster) error {

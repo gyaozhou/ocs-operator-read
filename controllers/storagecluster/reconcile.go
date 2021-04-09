@@ -439,6 +439,7 @@ func (r *StorageClusterReconciler) reconcilePhases(
 				Labels:            map[string]string{"": ""},
 			}
 		}
+		// zhou:
 		if err := r.enableMetricsExporter(instance); err != nil {
 			r.Log.Error(err, "failed to reconcile metrics exporter")
 			return reconcile.Result{}, err

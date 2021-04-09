@@ -111,7 +111,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// zhou: controller
+	// zhou: controller to handle `ocsinitialization`.
+	//       Used to init rook/ceph.
 	if err = (&ocsinitialization.OCSInitializationReconciler{
 		Client:         mgr.GetClient(),
 		Log:            ctrl.Log.WithName("controllers").WithName("OCSInitialization"),
@@ -122,7 +123,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// zhou: controller
+	// zhou: controller to handle `storagecluster`.
+	//
 	if err = (&storagecluster.StorageClusterReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("StorageCluster"),
@@ -132,7 +134,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// zhou: controller
+	// zhou: controller to handle `persistentvolume`.
+	//       Copy StorageClass's secret to ceph created rbd & cephfs PV.
 	if err = (&persistentvolume.PersistentVolumeReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("PersistentVolume"),
